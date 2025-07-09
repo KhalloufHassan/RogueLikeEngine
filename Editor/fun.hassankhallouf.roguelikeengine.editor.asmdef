@@ -1,0 +1,16 @@
+{
+    "name": "com.hassankhallouf.roguelikeengine.editor",
+    "rootNamespace": "",
+    "references": ["GUID:de40235f0820ef943ba4a38c8bd6ae39"],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
