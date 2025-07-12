@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using RogueLikeEngine.Attributes;
+using RogueLikeEngine.Extensions;
 using UnityEditor;
 using UnityEngine;
 
@@ -14,7 +15,7 @@ public class ConditionalDrawer : PropertyDrawer
 
         return EditorGUI.GetPropertyHeight(property, label, true);
     }
-
+    
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
         if (ShouldDisplay(property))
@@ -23,59 +24,50 @@ public class ConditionalDrawer : PropertyDrawer
 
     private bool ShouldDisplay(SerializedProperty property)
     {
-        object target = property.serializedObject.targetObject;
         PropertyAttribute baseAttribute = attribute;
+        ShowIfAttribute showIf = baseAttribute as ShowIfAttribute;
 
-        string conditionName;
-        object compareValue;
-        bool isHide = false;
-
-        if (baseAttribute is ShowIfAttribute show)
-        {
-            conditionName = show.ConditionFieldName;
-            compareValue = show.CompareValue;
-        }
-        else if (baseAttribute is HideIfAttribute hide)
-        {
-            conditionName = hide.ConditionFieldName;
-            compareValue = hide.CompareValue;
-            isHide = true;
-        }
-        else
+        if (showIf == null)
         {
             return true;
         }
 
-        FieldInfo field = target.GetType().GetField(conditionName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        PropertyInfo prop = target.GetType().GetProperty(conditionName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-
-        object conditionValue = null;
-
-        if (field != null)
-            conditionValue = field.GetValue(target);
-        else if (prop != null)
-            conditionValue = prop.GetValue(target, null);
-        else
+        // Get the object that owns the field with the attribute
+        object parentObject = SerializedPropertyExtensions.GetParentObject(property);
+        if (parentObject == null)
         {
-            Debug.LogWarning($"[ShowIf/HideIf] Could not find member '{conditionName}' on {target}");
             return true;
         }
 
-        bool result;
+        // Use reflection to get the condition field's value
+        FieldInfo conditionField = parentObject.GetType().GetField(
+            showIf.ConditionFieldName,
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
-        if (compareValue != null)
+        if (conditionField == null)
         {
-            result = compareValue.Equals(conditionValue);
+            Debug.LogWarning($"ShowIf: Could not find condition field '{showIf.ConditionFieldName}' on {parentObject.GetType()}");
+            return true;
+        }
+
+        object conditionValue = conditionField.GetValue(parentObject);
+        bool shouldShow = false;
+
+        if (showIf.CompareValue != null)
+        {
+            shouldShow = showIf.CompareValue.Equals(conditionValue);
         }
         else if (conditionValue is bool boolVal)
         {
-            result = boolVal;
+            shouldShow = boolVal;
         }
         else
         {
-            result = conditionValue != null;
+            shouldShow = conditionValue != null;
         }
 
-        return isHide ? !result : result;
+        return showIf.Inverse ? !shouldShow : shouldShow;
     }
 }
+
+

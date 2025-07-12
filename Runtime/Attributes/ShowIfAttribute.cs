@@ -15,5 +15,4 @@
             Inverse = inverse;
         }
     }
-
 }

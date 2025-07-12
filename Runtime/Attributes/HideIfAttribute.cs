@@ -1,16 +1,10 @@
 ﻿namespace RogueLikeEngine.Attributes
 {
-    using UnityEngine;
-
-    public class HideIfAttribute : PropertyAttribute
+    public class HideIfAttribute : ShowIfAttribute
     {
-        public string ConditionFieldName { get; }
-        public object CompareValue { get; }
-
         public HideIfAttribute(string conditionFieldName, object compareValue = null)
+            : base(conditionFieldName, compareValue,true)
         {
-            ConditionFieldName = conditionFieldName;
-            CompareValue = compareValue;
         }
     }
 
