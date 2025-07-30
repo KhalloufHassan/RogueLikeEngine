@@ -32,14 +32,12 @@ public class ConditionalDrawer : PropertyDrawer
             return true;
         }
 
-        // Get the object that owns the field with the attribute
         object parentObject = SerializedPropertyExtensions.GetParentObject(property);
         if (parentObject == null)
         {
             return true;
         }
 
-        // Use reflection to get the condition field's value
         FieldInfo conditionField = parentObject.GetType().GetField(
             showIf.ConditionFieldName,
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
@@ -51,7 +49,7 @@ public class ConditionalDrawer : PropertyDrawer
         }
 
         object conditionValue = conditionField.GetValue(parentObject);
-        bool shouldShow = false;
+        bool shouldShow;
 
         if (showIf.CompareValue != null)
         {
