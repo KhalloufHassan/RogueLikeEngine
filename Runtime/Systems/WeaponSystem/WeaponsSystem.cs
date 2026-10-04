@@ -7,6 +7,7 @@ namespace RogueLikeEngine.Systems.Weapons
     public class WeaponsSystem : EntitySystem
     {
         [SerializeField] private StatDefinition m_fireRateStatDefinition;
+        [SerializeField] private StatDefinition m_rangeStatDefinition;
         [SerializeField] private GunPoint m_gunPoint;
 
         public virtual WeaponInstance CurrentWeapon => m_gunPoint.CurrentWeapon;
@@ -38,8 +39,11 @@ namespace RogueLikeEngine.Systems.Weapons
             AimDirection = Vector3.zero;
         }
         
-        public int CalculatedProjectileDamage(WeaponData weaponData) => weaponData.baseDamage + Entity.StatsStore.GetOrCreateStat(weaponData.damageStat).FinalValue;
-        public float CalculatedFireRate(WeaponData weaponData) => weaponData.baseFireRate + weaponData.baseFireRate * (Entity.StatsStore.GetOrCreateStat(m_fireRateStatDefinition).FinalValue / 100f);
-        public float CalculatedProjectileRange(WeaponData weaponData) => weaponData.baseRange + Entity.StatsStore.GetOrCreateStat(weaponData.damageStat).FinalValue;
+        public int CalculatedProjectileDamage(WeaponData weaponData) => weaponData.baseDamage + GetStatValue(weaponData.damageStat);
+        public float CalculatedFireRate(WeaponData weaponData) => weaponData.baseFireRate + weaponData.baseFireRate * (GetStatValue(m_fireRateStatDefinition) / 100f);
+        public float CalculatedProjectileRange(WeaponData weaponData) => weaponData.baseRange + GetStatValue(m_rangeStatDefinition);
+
+        /// <summary>Returns the entity's value for the stat, or 0 when no stat definition is assigned.</summary>
+        private int GetStatValue(StatDefinition statDefinition) => statDefinition ? Entity.StatsStore.GetOrCreateStat(statDefinition).FinalValue : 0;
     }
 }

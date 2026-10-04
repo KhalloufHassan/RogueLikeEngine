@@ -49,6 +49,13 @@
 
         ModifierTextFormatingOptions FormatingOptions { get; }
 
+        /// <summary>
+        /// The value this modifier would contribute if it was added to the given store.
+        /// Must not change any state, neither the modifier's nor the store's.
+        /// </summary>
+        /// <param name="statsStore">the store to simulate against</param>
+        float PreviewValueFor(StatsStore statsStore);
+
     /// <summary>
         /// Called only once when the modifier is added to the stat
         /// </summary>

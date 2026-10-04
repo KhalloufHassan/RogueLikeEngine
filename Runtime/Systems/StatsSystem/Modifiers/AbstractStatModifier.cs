@@ -26,7 +26,8 @@ namespace RogueLikeEngine.Systems.Stats
         public abstract float Value { get; }
         public abstract float ValuePreview { get; }
         public ModifierTextFormatingOptions FormatingOptions => formatingOptions;
-        
+        public virtual float PreviewValueFor(StatsStore statsStore) => ValuePreview;
+
         
         public StatsStore StatsStore { get; set; }
         public Stat OwnerStat { get; set; }

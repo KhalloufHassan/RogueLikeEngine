@@ -32,7 +32,7 @@ public class ConditionalDrawer : PropertyDrawer
             return true;
         }
 
-        object parentObject = SerializedPropertyExtensions.GetParentObject(property);
+        object parentObject = SerializedPropertyReflection.GetParentObject(property);
         if (parentObject == null)
         {
             return true;

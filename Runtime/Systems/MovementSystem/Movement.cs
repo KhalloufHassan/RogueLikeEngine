@@ -79,6 +79,9 @@ namespace RogueLikeEngine.Systems.Movements
             ApplyVelocity(velocity, deltaTime);
         }
 
+        /// <summary>Resets the distance metric, e.g. when a pooled entity is reused.</summary>
+        public void ResetTraveledDistance() => TraveledDistance = 0;
+
         /// <summary>Stops externally driven motion and allows walking to resume.</summary>
         public void ClearExternalVelocity()
         {

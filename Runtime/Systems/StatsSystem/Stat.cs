@@ -19,8 +19,8 @@ namespace RogueLikeEngine.Systems.Stats
 
         public int FinalValue => Mathf.FloorToInt(FinalFloatValue);
 
-        /// <summary>Returns the final stat value without rounding away fractional precision.</summary>
-        public float FinalFloatValue => Mathf.Max(PermanentValue + TemporaryValue, Cap ?? float.NegativeInfinity);
+        /// <summary>Returns the final stat value without rounding away fractional precision, limited by the cap if any.</summary>
+        public float FinalFloatValue => Mathf.Min(PermanentValue + TemporaryValue, Cap ?? float.PositiveInfinity);
 
         private readonly IList<IStatModifier> m_modifiers = new List<IStatModifier>();
 
@@ -75,19 +75,11 @@ namespace RogueLikeEngine.Systems.Stats
                 }
         }
         
-        public float PreviewModifierValue(IStatModifier newModifier)
-        {
-            Stat previewStat = new(StatDefinition, StatsStore);
-    
-            foreach (IStatModifier modifier in m_modifiers)
-            {
-                //TODO this is dangerous ? we need a deep copy
-                previewStat.AddModifier(modifier);
-            }
-    
-            previewStat.AddModifier(newModifier);
-            return newModifier.Value;
-        }
+        /// <summary>
+        /// Returns the value the given modifier would contribute if it was added to this stat's store.
+        /// Read-only: neither this stat, its modifiers nor the new modifier are changed.
+        /// </summary>
+        public float PreviewModifierValue(IStatModifier newModifier) => newModifier.PreviewValueFor(StatsStore);
 
 
         public void AddStatLink(StatLink statLink) => (StatLinks ??= new List<StatLink>()).Add(statLink);

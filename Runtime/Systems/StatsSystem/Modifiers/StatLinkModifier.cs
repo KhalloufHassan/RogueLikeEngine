@@ -23,17 +23,25 @@ namespace RogueLikeEngine.Systems.Stats
             m_linkedStat.AddStatLink(m_statLink);
         }
 
+        public override float PreviewValueFor(StatsStore statsStore)
+        {
+            if (statsStore == null || !linkedStatDefinition) return 0;
+            return GetLinkedValue(statsStore.GetOrCreateStat(linkedStatDefinition)) * increaseRate;
+        }
+
+        private float GetLinkedValue(Stat linkedStat) => Permanence switch
+        {
+            StatPermanence.Permanent => linkedStat.PermanentValue,
+            StatPermanence.Temporary => linkedStat.TemporaryValue,
+            StatPermanence.FinalValue => linkedStat.FinalValue,
+            _ => throw new ArgumentOutOfRangeException()
+        };
+
         public override float Value
         {
             get
             {
-                float currentValue = Permanence switch
-                {
-                    StatPermanence.Permanent => m_linkedStat.PermanentValue,
-                    StatPermanence.Temporary => m_linkedStat.TemporaryValue,
-                    StatPermanence.FinalValue => m_linkedStat.FinalValue,
-                    _ => throw new ArgumentOutOfRangeException()
-                };
+                float currentValue = GetLinkedValue(m_linkedStat);
                 StatLink prevLink = OwnerStat.GetStatLinkFor(m_linkedStat);
                 if (prevLink != null)
                     m_statLink.BaseValueIncreased =  (currentValue - prevLink.BaseValueIncreased) * increaseRate;

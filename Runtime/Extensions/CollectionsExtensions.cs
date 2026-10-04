@@ -76,48 +76,50 @@ namespace RogueLikeEngine.Extensions
         return index >= 0 && index < array.Length;
     }
     
+    /// <summary>
+    /// Searches forward, wrapping around, starting after <paramref name="index"/>; the element at index itself is skipped.
+    /// An out of bounds index searches the whole list starting from the first element.
+    /// </summary>
     public static T FirstOrDefaultStartingAtIndex<T>(this IList<T> source, int index, Func<T, bool> predicate)
     {
         if (source == null)
             throw new ArgumentNullException(nameof(source));
-        
-        if (source.Count == 0)
-            return default;
 
-        int currentIndex = index + 1;
+        int count = source.Count;
+        bool startInBounds = index >= 0 && index < count;
+        int start = startInBounds ? index : -1;
+        int steps = startInBounds ? count - 1 : count;
 
-        do
+        for (int step = 1; step <= steps; step++)
         {
-            if (currentIndex >= source.Count)
-                currentIndex = 0;
-            if (predicate(source[currentIndex]))
-                return source[currentIndex];
-
-            currentIndex++;
-        } while (currentIndex != index);
+            T item = source[(start + step) % count];
+            if (predicate(item))
+                return item;
+        }
 
         return default;
     }
-    
+
+    /// <summary>
+    /// Searches backward, wrapping around, starting before <paramref name="index"/>; the element at index itself is skipped.
+    /// An out of bounds index searches the whole list starting from the last element.
+    /// </summary>
     public static T LastOrDefaultStartingAtIndex<T>(this IList<T> source, int index, Func<T, bool> predicate)
     {
         if (source == null)
             throw new ArgumentNullException(nameof(source));
-        
-        if (source.Count == 0)
-            return default;
 
-        int currentIndex = index - 1;
+        int count = source.Count;
+        bool startInBounds = index >= 0 && index < count;
+        int start = startInBounds ? index : count;
+        int steps = startInBounds ? count - 1 : count;
 
-        do
+        for (int step = 1; step <= steps; step++)
         {
-            if (currentIndex < 0)
-                currentIndex = source.Count - 1;
-            if (predicate(source[currentIndex]))
-                return source[currentIndex];
-
-            currentIndex--;
-        } while (currentIndex != index);
+            T item = source[(start - step + count) % count];
+            if (predicate(item))
+                return item;
+        }
 
         return default;
     }

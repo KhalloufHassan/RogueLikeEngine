@@ -5,7 +5,7 @@ using UnityEditor;
 
 namespace RogueLikeEngine.Extensions
 {
-    public static class SerializedPropertyExtensions
+    internal static class SerializedPropertyReflection
     {
         public static object GetParentObject(SerializedProperty property)
         {

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using RogueLikeEngine.Extensions;
 using RogueLikeEngine.Systems.Entities.Effects;
 using RogueLikeEngine.Systems.Entities.Items;
 using RogueLikeEngine.Systems.Healths;
@@ -8,6 +7,7 @@ using RogueLikeEngine.Systems.Movements;
 using RogueLikeEngine.Systems.Stats;
 using RogueLikeEngine.Systems.Weapons;
 using UnityEngine;
+using UnityEngine.Pool;
 
 namespace RogueLikeEngine.Systems.Entities
 {
@@ -27,21 +27,30 @@ namespace RogueLikeEngine.Systems.Entities
         public event Action<IEffect> OnEffectAdded;
 
         private IDictionary<int, IEffect> Effects { get; set; } = new Dictionary<int, IEffect>();
-        private readonly HashSet<int> m_markedForDeletion = new();
+
+        /// <summary>True once the starting effects have been applied at least once (e.g. after Start).</summary>
+        protected bool StartingEffectsApplied { get; private set; }
 
         private void Start()
         {
             ApplyStartingEffect();
         }
 
-        private void ApplyStartingEffect()
+        /// <summary>
+        /// Applies the configured starting effects. The array is kept intact so the effects can be re-applied,
+        /// e.g. when a pooled entity is reused, effects already present are stacked instead of duplicated.
+        /// </summary>
+        protected void ApplyStartingEffect()
         {
-            foreach (EffectScriptableObject effect in m_startingEffects)
+            if (m_startingEffects != null)
             {
-                AddEffect(effect);
+                foreach (EffectScriptableObject effect in m_startingEffects)
+                {
+                    if (effect) AddEffect(effect);
+                }
             }
 
-            m_startingEffects.Clear();
+            StartingEffectsApplied = true;
         }
 
         public void AddEffect(IEffect effect, Entity damageOwnerOverride = null)
@@ -60,58 +69,79 @@ namespace RogueLikeEngine.Systems.Entities
             }
         }
 
+        /// <summary>
+        /// Removes the entity's copy of the given effect (the template or the copy itself can be passed).
+        /// Does nothing if the effect is not applied.
+        /// </summary>
         public void RemoveEffect(IEffect effect, bool triggerDurationEnded)
         {
-            int effectID = effect.ID;
-            IEffect e = Effects[effectID];
-            if (e != null)
+            if (!Effects.TryGetValue(effect.ID, out IEffect internalCopy)) return;
+
+            // Remove first so the callback can safely add/remove effects
+            Effects.Remove(effect.ID);
+            if (triggerDurationEnded && internalCopy is IOnDurationEnded onDurationEnded)
+                onDurationEnded.OnDurationEnded(this);
+        }
+
+        /// <summary>Removes every applied effect.</summary>
+        public void ClearEffects(bool triggerDurationEnded)
+        {
+            if (Effects.Count == 0) return;
+            using (ListPool<IEffect>.Get(out List<IEffect> snapshot))
             {
-                if (triggerDurationEnded && effect is IOnDurationEnded onDurationEnded)
-                    onDurationEnded.OnDurationEnded(this);
-                Effects.Remove(effectID);
+                snapshot.AddRange(Effects.Values);
+                foreach (IEffect effect in snapshot)
+                    RemoveEffect(effect, triggerDurationEnded);
             }
         }
 
         protected virtual void Update()
         {
             if (Effects.Count == 0) return;
-            foreach (IEffect effect in Effects.Values)
+            // Iterate a snapshot: effect callbacks may add or remove effects
+            using (ListPool<IEffect>.Get(out List<IEffect> snapshot))
             {
-                if (effect is IOnUpdate onUpdate)
-                    onUpdate.OnUpdate(this);
-                if (effect.DurationTimer.IsFinished)
+                snapshot.AddRange(Effects.Values);
+                foreach (IEffect effect in snapshot)
                 {
-                    if (effect is IOnDurationEnded onDurationEnded)
-                        onDurationEnded.OnDurationEnded(this);
-                    m_markedForDeletion.Add(effect.ID);
+                    if (!IsApplied(effect)) continue;
+                    if (effect is IOnUpdate onUpdate)
+                        onUpdate.OnUpdate(this);
+                    if (IsApplied(effect) && effect.DurationTimer.IsFinished)
+                        RemoveEffect(effect, true);
                 }
             }
-
-            foreach (int id in m_markedForDeletion)
-            {
-                Effects.Remove(id);
-            }
-
-            m_markedForDeletion.Clear();
         }
 
         private void FixedUpdate()
         {
-            foreach (IEffect effect in Effects.Values)
+            if (Effects.Count == 0) return;
+            using (ListPool<IEffect>.Get(out List<IEffect> snapshot))
             {
-                if (effect is IOnFixedUpdate onFixedUpdate)
-                    onFixedUpdate.OnFixedUpdate(this);
+                snapshot.AddRange(Effects.Values);
+                foreach (IEffect effect in snapshot)
+                {
+                    if (IsApplied(effect) && effect is IOnFixedUpdate onFixedUpdate)
+                        onFixedUpdate.OnFixedUpdate(this);
+                }
             }
         }
 
         protected virtual void OnCollisionEnter2D(Collision2D other)
         {
-            foreach (IEffect effect in Effects.Values)
+            if (Effects.Count == 0) return;
+            using (ListPool<IEffect>.Get(out List<IEffect> snapshot))
             {
-                if (effect is IOnHit onHit)
-                    onHit.OnHit(this, other);
+                snapshot.AddRange(Effects.Values);
+                foreach (IEffect effect in snapshot)
+                {
+                    if (IsApplied(effect) && effect is IOnHit onHit)
+                        onHit.OnHit(this, other);
+                }
             }
         }
+
+        private bool IsApplied(IEffect effect) => Effects.TryGetValue(effect.ID, out IEffect current) && ReferenceEquals(current, effect);
 
         public void AllSystemsActive(bool isActive)
         {
@@ -122,7 +152,7 @@ namespace RogueLikeEngine.Systems.Entities
 
 
 
-        public void DestroyEntity()
+        public virtual void DestroyEntity()
         {
             Destroy(gameObject);
         }
