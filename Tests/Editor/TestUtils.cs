@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
+using RogueLikeEngine.Systems.Stats;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -37,6 +38,17 @@ namespace RogueLikeEngine.Tests
             }
 
             m_objects.Clear();
+        }
+    }
+
+    internal static class TestModifiers
+    {
+        public static BasicStatModifier Flat(StatDefinition stat, float value)
+        {
+            BasicStatModifier modifier = new();
+            TestReflection.SetField(modifier, "targetStat", stat);
+            modifier.ForceNewValue(value);
+            return modifier;
         }
     }
 

@@ -1,62 +1,64 @@
-﻿using UnityEditor;
+using UnityEditor;
 using UnityEngine;
 using System;
-using System.Linq;
 using System.Collections.Generic;
-using System.Reflection;
+using System.Linq;
 using RogueLikeEngine.Attributes;
 
+/// <summary>
+/// Draws a type picker for [SerializeReference] fields followed by the selected instance's fields.
+/// Keeps no per-property state: Unity shares one drawer instance across all elements of an array,
+/// so the current selection is always read from the property itself.
+/// </summary>
 [CustomPropertyDrawer(typeof(ReferencePickerAttribute))]
 public class ReferencePickerDrawer : PropertyDrawer
 {
-    private List<Type> _types;
-    private string[] _typeNames;
-    private int _selectedIndex;
-    private bool _initialized;
+    private const float Spacing = 2f;
+
+    private class TypeOptions
+    {
+        public Type[] Types;
+        public GUIContent[] Names;
+        /// <summary>Type names in the "Assembly Namespace.Class" format of managedReferenceFullTypename</summary>
+        public string[] ManagedNames;
+    }
+
+    private static readonly Dictionary<string, TypeOptions> s_optionsByFieldType = new();
 
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
-        if (!_initialized)
-        {
-            Initialize(property);
-            _initialized = true;
-        }
-
         EditorGUI.BeginProperty(position, label, property);
 
-        Rect popupRect = new(position.x, position.y, position.width, EditorGUIUtility.singleLineHeight);
-
-        int newIndex = EditorGUI.Popup(popupRect, label.text, _selectedIndex, _typeNames);
-
-        if (newIndex != _selectedIndex)
+        if (property.propertyType != SerializedPropertyType.ManagedReference)
         {
-            _selectedIndex = newIndex;
-            Type selectedType = _types[_selectedIndex];
+            EditorGUI.LabelField(position, label.text, $"[{nameof(ReferencePickerAttribute)}] requires [SerializeReference]");
+            EditorGUI.EndProperty();
+            return;
+        }
 
+        TypeOptions options = GetOptions(property);
+        Rect popupRect = new(position.x, position.y, position.width, EditorGUIUtility.singleLineHeight);
+        int currentIndex = Array.IndexOf(options.ManagedNames, property.managedReferenceFullTypename);
+        if (currentIndex < 0) currentIndex = 0;
+
+        int newIndex = EditorGUI.Popup(popupRect, label, currentIndex, options.Names);
+
+        if (newIndex != currentIndex)
+        {
+            Type selectedType = options.Types[newIndex];
             property.managedReferenceValue = selectedType == null ? null : Activator.CreateInstance(selectedType);
             property.serializedObject.ApplyModifiedProperties();
         }
-
-        if (property.managedReferenceValue != null)
+        else if (property.managedReferenceValue != null)
         {
             EditorGUI.indentLevel++;
-            SerializedProperty iterator = property.Copy();
-            SerializedProperty end = iterator.GetEndProperty();
-
-            float y = popupRect.yMax + 2f;
-            iterator.NextVisible(true);
-
-            while (!SerializedProperty.EqualContents(iterator, end))
+            float y = popupRect.yMax + Spacing;
+            foreach (SerializedProperty child in GetChildren(property))
             {
-                float height = EditorGUI.GetPropertyHeight(iterator, true);
-                Rect fieldRect = new(position.x, y, position.width, height);
-                EditorGUI.PropertyField(fieldRect, iterator, true);
-                y += height + 2f;
-
-                if (!iterator.NextVisible(false))
-                    break;
+                float height = EditorGUI.GetPropertyHeight(child, true);
+                EditorGUI.PropertyField(new Rect(position.x, y, position.width, height), child, true);
+                y += height + Spacing;
             }
-
             EditorGUI.indentLevel--;
         }
 
@@ -66,82 +68,77 @@ public class ReferencePickerDrawer : PropertyDrawer
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
         float height = EditorGUIUtility.singleLineHeight;
+        if (property.propertyType != SerializedPropertyType.ManagedReference || property.managedReferenceValue == null)
+            return height;
 
-        if (!_initialized)
-            Initialize(property);
-
-        if (property.managedReferenceValue != null)
-        {
-            SerializedProperty iterator = property.Copy();
-            SerializedProperty end = iterator.GetEndProperty();
-
-            iterator.NextVisible(true);
-            while (!SerializedProperty.EqualContents(iterator, end))
-            {
-                height += EditorGUI.GetPropertyHeight(iterator, true) + 2f;
-                if (!iterator.NextVisible(false))
-                    break;
-            }
-        }
+        foreach (SerializedProperty child in GetChildren(property))
+            height += EditorGUI.GetPropertyHeight(child, true) + Spacing;
 
         return height;
     }
 
-    private void Initialize(SerializedProperty property)
+    private static IEnumerable<SerializedProperty> GetChildren(SerializedProperty property)
     {
-        Type baseType = GetBaseType(property);
+        SerializedProperty iterator = property.Copy();
+        SerializedProperty end = iterator.GetEndProperty();
+        if (!iterator.NextVisible(true)) yield break;
 
+        while (!SerializedProperty.EqualContents(iterator, end))
+        {
+            yield return iterator;
+            if (!iterator.NextVisible(false)) yield break;
+        }
+    }
+
+    private static TypeOptions GetOptions(SerializedProperty property)
+    {
+        string fieldTypeName = property.managedReferenceFieldTypename;
+        if (s_optionsByFieldType.TryGetValue(fieldTypeName, out TypeOptions options))
+            return options;
+
+        Type baseType = ResolveType(fieldTypeName);
         if (baseType == null)
+            Debug.LogWarning($"ReferencePicker: Could not resolve base type from '{fieldTypeName}'");
+
+        List<Type> types = new() { null };
+        if (baseType != null)
         {
-            _types = new List<Type> { null };
-            _typeNames = new[] { "[None]" };
-            Debug.LogWarning($"ReferencePicker: Could not resolve base type from {property.managedReferenceFieldTypename}");
-            return;
+            types.AddRange(TypeCache.GetTypesDerivedFrom(baseType)
+                .Where(IsAssignableToReference)
+                .OrderBy(t => t.Name));
         }
 
-        _types = new List<Type> { null };
-        _types.AddRange(GetSubtypes(baseType));
-
-        _typeNames = _types.Select(t => t == null ? "[None]" : t.Name).ToArray();
-
-        if (property.managedReferenceValue != null)
+        options = new TypeOptions
         {
-            Type currentType = property.managedReferenceValue.GetType();
-            _selectedIndex = _types.FindIndex(t => t == currentType);
-            if (_selectedIndex == -1) _selectedIndex = 0;
-        }
-        else
-        {
-            _selectedIndex = 0;
-        }
+            Types = types.ToArray(),
+            Names = types.Select(t => new GUIContent(t == null ? "[None]" : ObjectNames.NicifyVariableName(t.Name), t?.FullName)).ToArray(),
+            ManagedNames = types.Select(t => t == null ? string.Empty : $"{t.Assembly.GetName().Name} {t.FullName?.Replace('+', '/')}").ToArray()
+        };
+        s_optionsByFieldType[fieldTypeName] = options;
+        return options;
     }
 
-    private static Type GetBaseType(SerializedProperty property)
+    /// <summary>Same rules [SerializeReference] has: concrete, non generic, [Serializable], not a Unity object, default constructible.</summary>
+    private static bool IsAssignableToReference(Type type) =>
+        !type.IsAbstract &&
+        !type.IsInterface &&
+        !type.IsGenericTypeDefinition &&
+        type.IsSerializable &&
+        !typeof(UnityEngine.Object).IsAssignableFrom(type) &&
+        type.GetConstructor(Type.EmptyTypes) != null;
+
+    /// <summary>Resolves Unity's "Assembly Namespace.Class" format, where nested types use '/' instead of '+'.</summary>
+    private static Type ResolveType(string managedTypeName)
     {
-        string typeName = property.managedReferenceFieldTypename;
-
-        if (string.IsNullOrEmpty(typeName))
+        if (string.IsNullOrEmpty(managedTypeName))
             return null;
 
-        string[] parts = typeName.Split(' ');
-        if (parts.Length != 2)
+        int separator = managedTypeName.IndexOf(' ');
+        if (separator < 0)
             return null;
 
-        string assemblyName = parts[0];
-        string className = parts[1];
-
+        string assemblyName = managedTypeName[..separator];
+        string className = managedTypeName[(separator + 1)..].Replace('/', '+');
         return Type.GetType($"{className}, {assemblyName}");
-    }
-
-    private static IEnumerable<Type> GetSubtypes(Type baseType)
-    {
-        return AppDomain.CurrentDomain.GetAssemblies()
-            .Where(a => !a.IsDynamic)
-            .SelectMany(a =>
-            {
-                try { return a.GetTypes(); }
-                catch (ReflectionTypeLoadException ex) { return ex.Types.Where(t => t != null); }
-            })
-            .Where(t => baseType.IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface && t.GetConstructor(Type.EmptyTypes) != null);
     }
 }

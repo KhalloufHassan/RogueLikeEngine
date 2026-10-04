@@ -58,6 +58,38 @@ namespace RogueLikeEngine.Tests
         }
 
         [Test]
+        public void DifferentTemplates_WithSameName_AreSeparateEffects()
+        {
+            TestEffect first = Apply(TestEffect.Create(m_objects, "Burn"));
+            TestEffect second = Apply(TestEffect.Create(m_objects, "Burn"));
+
+            Assert.AreNotSame(first, second);
+            Assert.AreNotEqual(first.ID, second.ID);
+        }
+
+        [Test]
+        public void DifferentTemplates_WithEmptyNames_AreSeparateEffects()
+        {
+            TestEffect first = Apply(TestEffect.Create(m_objects, ""));
+            TestEffect second = Apply(TestEffect.Create(m_objects, null));
+
+            Assert.AreNotSame(first, second);
+        }
+
+        [Test]
+        public void CopyOfACopy_KeepsTheTemplateId()
+        {
+            TestEffect template = TestEffect.Create(m_objects, "Burn");
+            IEffect copy = template.GetCopy();
+            IEffect copyOfCopy = copy.GetCopy();
+            m_objects.Track((TestEffect)copy);
+            m_objects.Track((TestEffect)copyOfCopy);
+
+            Assert.AreEqual(template.ID, copy.ID);
+            Assert.AreEqual(template.ID, copyOfCopy.ID);
+        }
+
+        [Test]
         public void RemoveEffect_NotApplied_DoesNotThrow()
         {
             TestEffect template = TestEffect.Create(m_objects, "Burn");

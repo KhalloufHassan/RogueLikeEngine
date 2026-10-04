@@ -62,5 +62,10 @@
         /// <param name="statsStore">a reference to the stat store owning the stat</param>
         /// <param name="ownerStat">a reference to the stat owning the modifier</param>
         void Configure(StatsStore statsStore, Stat ownerStat);
+
+        /// <summary>
+        /// Called when the modifier is removed from the stat, undoes anything done in Configure (e.g. event subscriptions)
+        /// </summary>
+        void Unconfigure();
     }
 }

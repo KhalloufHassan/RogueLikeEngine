@@ -136,21 +136,74 @@ namespace RogueLikeEngine.Tests
         }
 
         [Test]
-        public void RateIncrease_ScalesFlatModifiersProcessedAfterIt()
+        public void RateIncrease_AddedBeforeFlat_ScalesIt()
         {
-            m_store.AddModifier(new TestModifier(m_damage, 0.5f, StatModifierMode.RateIncrease, priority: 10));
+            m_store.AddModifier(new TestModifier(m_damage, 0.5f, StatModifierMode.RateIncrease));
             m_store.AddModifier(new TestModifier(m_damage, 10));
 
             Assert.AreEqual(15, Damage.FinalValue);
         }
 
-        [Test, Ignore("Known bug: RateIncrease only scales flat modifiers that are processed after it, so the result depends on the order modifiers were added")]
-        public void RateIncrease_IsIndependentOfAddOrder()
+        [Test]
+        public void RateIncrease_AddedAfterFlat_ScalesIt()
         {
             m_store.AddModifier(new TestModifier(m_damage, 10));
             m_store.AddModifier(new TestModifier(m_damage, 0.5f, StatModifierMode.RateIncrease));
 
             Assert.AreEqual(15, Damage.FinalValue);
+        }
+
+        [Test]
+        public void RateIncrease_IgnoresPriority()
+        {
+            m_store.AddModifier(new TestModifier(m_damage, 10, priority: 10));
+            m_store.AddModifier(new TestModifier(m_damage, 0.5f, StatModifierMode.RateIncrease, priority: -10));
+
+            Assert.AreEqual(15, Damage.FinalValue);
+        }
+
+        [Test]
+        public void RateIncreases_AreAddedTogether()
+        {
+            m_store.AddModifier(new TestModifier(m_damage, 10));
+            m_store.AddModifier(new TestModifier(m_damage, 0.5f, StatModifierMode.RateIncrease));
+            m_store.AddModifier(new TestModifier(m_damage, 0.5f, StatModifierMode.RateIncrease));
+
+            Assert.AreEqual(2f, Damage.IncreasePercentage);
+            Assert.AreEqual(20, Damage.FinalValue);
+        }
+
+        [Test]
+        public void RateIncrease_ScalesPermanentAndTemporaryValues()
+        {
+            m_store.AddModifier(new TestModifier(m_damage, 10, permanence: StatPermanence.Permanent));
+            m_store.AddModifier(new TestModifier(m_damage, 4, permanence: StatPermanence.Temporary));
+            m_store.AddModifier(new TestModifier(m_damage, 0.5f, StatModifierMode.RateIncrease));
+
+            Assert.AreEqual(15f, Damage.PermanentValue);
+            Assert.AreEqual(6f, Damage.TemporaryValue);
+        }
+
+        [Test]
+        public void RateIncrease_Removed_RevertsScaling()
+        {
+            TestModifier rate = new(m_damage, 0.5f, StatModifierMode.RateIncrease);
+            m_store.AddModifier(new TestModifier(m_damage, 10));
+            m_store.AddModifier(rate);
+
+            m_store.RemoveModifier(rate);
+
+            Assert.AreEqual(10, Damage.FinalValue);
+        }
+
+        [Test]
+        public void ForceCap_Multiple_LowestWinsRegardlessOfOrder()
+        {
+            m_store.AddModifier(new TestModifier(m_damage, 50));
+            m_store.AddModifier(new TestModifier(m_damage, 20, StatModifierMode.ForceCap));
+            m_store.AddModifier(new TestModifier(m_damage, 30, StatModifierMode.ForceCap));
+
+            Assert.AreEqual(20, Damage.FinalValue);
         }
 
         [Test]

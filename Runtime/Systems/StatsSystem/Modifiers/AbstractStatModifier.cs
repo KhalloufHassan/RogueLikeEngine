@@ -38,5 +38,11 @@ namespace RogueLikeEngine.Systems.Stats
             OwnerStat = ownerStat;
         }
 
+        public virtual void Unconfigure()
+        {
+            StatsStore = null;
+            OwnerStat = null;
+        }
+
     }
 }

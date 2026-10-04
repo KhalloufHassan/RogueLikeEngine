@@ -70,12 +70,6 @@ namespace RogueLikeEngine.Tests
             Assert.AreEqual(10f, m_weaponsSystem.CalculatedProjectileRange(m_weapon));
         }
 
-        private void AddFlat(StatDefinition stat, float value)
-        {
-            BasicStatModifier modifier = new();
-            TestReflection.SetField(modifier, "targetStat", stat);
-            modifier.ForceNewValue(value);
-            m_entity.StatsStore.AddModifier(modifier);
-        }
+        private void AddFlat(StatDefinition stat, float value) => m_entity.StatsStore.AddModifier(TestModifiers.Flat(stat, value));
     }
 }

@@ -42,30 +42,45 @@ namespace RogueLikeEngine.Systems.Stats
         
         internal void RemoveModifier(IStatModifier modifier)
         {
-            if (m_modifiers.Remove(modifier))
-                RecalculateValue();
+            if (!m_modifiers.Remove(modifier)) return;
+            modifier.Unconfigure();
+            RecalculateValue();
         }
 
+        /// <summary>
+        /// Recalculates the stat from its active modifiers:
+        /// flat values are summed, then scaled by the sum of all rate increases, then limited by the lowest cap.
+        /// The result doesn't depend on the order the modifiers were added in.
+        /// </summary>
         public void RecalculateValue(bool statLinkUpdate = false)
         {
-            PermanentValue = 0;
-            TemporaryValue = 0;
-            Cap = null;
-            IncreasePercentage = 1.0f;
+            float permanentValue = 0;
+            float temporaryValue = 0;
+            float increasePercentage = 1.0f;
+            float? cap = null;
             foreach (IStatModifier statModifier in m_modifiers.OrderByDescending(m => m.Priority).Where(m => m.IsActive))
             {
-                if(statModifier.Mode == StatModifierMode.FlatValue)
+                switch (statModifier.Mode)
                 {
-                    if(statModifier.Permanence is StatPermanence.Permanent or StatPermanence.FinalValue)
-                        PermanentValue += statModifier.Value * IncreasePercentage;
-                    else if(statModifier.Permanence == StatPermanence.Temporary)
-                        TemporaryValue +=  statModifier.Value * IncreasePercentage;
+                    case StatModifierMode.FlatValue when statModifier.Permanence == StatPermanence.Temporary:
+                        temporaryValue += statModifier.Value;
+                        break;
+                    case StatModifierMode.FlatValue:
+                        permanentValue += statModifier.Value;
+                        break;
+                    case StatModifierMode.RateIncrease:
+                        increasePercentage += statModifier.Value;
+                        break;
+                    case StatModifierMode.ForceCap:
+                        cap = cap.HasValue ? Mathf.Min(cap.Value, statModifier.Value) : statModifier.Value;
+                        break;
                 }
-                else if(statModifier.Mode == StatModifierMode.RateIncrease)
-                    IncreasePercentage += statModifier.Value;
-                else if(statModifier.Mode == StatModifierMode.ForceCap)
-                    Cap = statModifier.Value;
             }
+
+            IncreasePercentage = increasePercentage;
+            PermanentValue = permanentValue * increasePercentage;
+            TemporaryValue = temporaryValue * increasePercentage;
+            Cap = cap;
             OnValueChanged?.Invoke();
             
             if(!statLinkUpdate && StatLinks != null)
