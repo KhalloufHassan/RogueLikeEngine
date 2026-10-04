@@ -19,6 +19,6 @@ namespace RogueLikeEngine.Systems.Weapons
         [HideIf(nameof(projectilesPool))]
         public Projectile projectilePrefab;
 
-        public WeaponInstance CreateWeaponInstance() => new(this);
+        public virtual WeaponInstance CreateWeaponInstance() => new(this);
     }
 }

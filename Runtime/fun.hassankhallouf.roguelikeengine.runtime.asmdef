@@ -3,8 +3,7 @@
     "rootNamespace": "",
     "references": [
         "Unity.InputSystem",
-        "Unity.TextMeshPro",
-        "today.comes.saintsfield.Runtime"
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

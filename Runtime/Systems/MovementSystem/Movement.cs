@@ -16,6 +16,11 @@ namespace RogueLikeEngine.Systems.Movements
         public bool IsMoving => MovementDirection.magnitude > 1E-10;
         public float TraveledDistance { get; private set; }
 
+        public Vector2 Position => m_rigidbody.position;
+        public Vector2 Velocity => m_rigidbody.linearVelocity;
+        public float Speed => m_baseSpeed + m_baseSpeed * (m_movementSpeedStat?.FinalFloatValue ?? 0) / 100f;
+
+        private bool m_hasExternalVelocity;
         private Stat m_movementSpeedStat;
         
         private void Start()
@@ -25,7 +30,7 @@ namespace RogueLikeEngine.Systems.Movements
             m_rotateToAimDirection = m_rotateToAimDirection && Entity.WeaponsSystem;
         }
 
-        protected void Update()
+        protected virtual void Update()
         {
             if(!IsSystemActive) 
                 MovementDirection = Vector3.zero;
@@ -60,14 +65,47 @@ namespace RogueLikeEngine.Systems.Movements
             }
         }
         
-        private void UpdateVelocity()
+        protected virtual void UpdateVelocity()
         {
-            float speed = m_baseSpeed;
-            if(m_movementSpeedStat != null)
-                speed += m_baseSpeed * (m_movementSpeedStat.FinalValue/100f);
-            m_rigidbody.linearVelocity = MovementDirection * speed;
-            
-            TraveledDistance += (MovementDirection * speed * Time.deltaTime).magnitude;
+            if (m_hasExternalVelocity) return;
+            ApplyVelocity(MovementDirection * Speed, Time.deltaTime);
+        }
+
+        /// <summary>Applies externally driven motion, suppressing walking until cleared. Call from the physics loop.</summary>
+        public void SetExternalVelocity(Vector2 velocity, float deltaTime)
+        {
+            if (!IsSystemActive || !isActiveAndEnabled) return;
+            m_hasExternalVelocity = true;
+            ApplyVelocity(velocity, deltaTime);
+        }
+
+        /// <summary>Stops externally driven motion and allows walking to resume.</summary>
+        public void ClearExternalVelocity()
+        {
+            m_hasExternalVelocity = false;
+            if (m_rigidbody) ApplyVelocity(Vector2.zero, 0);
+        }
+
+        protected override void OnSystemActiveChanged()
+        {
+            if (!IsSystemActive)
+            {
+                MovementDirection = Vector2.zero;
+                ClearExternalVelocity();
+            }
+        }
+
+        protected virtual void OnDisable()
+        {
+            MovementDirection = Vector2.zero;
+            ClearExternalVelocity();
+        }
+
+        /// <summary>Applies movement while retaining the system's distance metric.</summary>
+        protected void ApplyVelocity(Vector2 velocity, float deltaTime)
+        {
+            m_rigidbody.linearVelocity = velocity;
+            TraveledDistance += velocity.magnitude * deltaTime;
         }
     }
 }

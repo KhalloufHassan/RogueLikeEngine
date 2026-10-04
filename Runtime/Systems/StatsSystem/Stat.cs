@@ -17,7 +17,10 @@ namespace RogueLikeEngine.Systems.Stats
         public float? Cap { get; private set; }
         public List<StatLink> StatLinks { get; private set; }
 
-        public int FinalValue => Mathf.FloorToInt(Mathf.Max(PermanentValue + TemporaryValue,  Cap ?? float.NegativeInfinity));
+        public int FinalValue => Mathf.FloorToInt(FinalFloatValue);
+
+        /// <summary>Returns the final stat value without rounding away fractional precision.</summary>
+        public float FinalFloatValue => Mathf.Max(PermanentValue + TemporaryValue, Cap ?? float.NegativeInfinity);
 
         private readonly IList<IStatModifier> m_modifiers = new List<IStatModifier>();
 
