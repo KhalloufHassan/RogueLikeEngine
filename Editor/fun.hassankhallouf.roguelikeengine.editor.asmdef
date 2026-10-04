@@ -1,6 +1,6 @@
 {
-    "name": "com.hassankhallouf.roguelikeengine.editor",
-    "rootNamespace": "",
+    "name": "fun.hassankhallouf.roguelikeengine.editor",
+    "rootNamespace": "RogueLikeEngine.EditorTools",
     "references": ["GUID:de40235f0820ef943ba4a38c8bd6ae39"],
     "includePlatforms": [
         "Editor"

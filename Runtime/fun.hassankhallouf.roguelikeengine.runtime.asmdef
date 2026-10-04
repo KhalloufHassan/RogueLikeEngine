@@ -1,6 +1,6 @@
 {
-    "name": "com.hassankhallouf.roguelikeengine",
-    "rootNamespace": "",
+    "name": "fun.hassankhallouf.roguelikeengine.runtime",
+    "rootNamespace": "RogueLikeEngine",
     "references": [
         "Unity.InputSystem",
         "Unity.TextMeshPro"
