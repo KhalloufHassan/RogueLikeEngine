@@ -117,7 +117,7 @@ namespace RogueLikeEngine.Tests.PlayMode
             projectile.SetDirection(Vector2.right);
 
             float timeout = Time.time + 2f;
-            while (health.CurrentHealth == 100 && Time.time < timeout)
+            while (projectile.gameObject.activeSelf && Time.time < timeout)
                 yield return new WaitForFixedUpdate();
 
             Assert.AreEqual(90, health.CurrentHealth);

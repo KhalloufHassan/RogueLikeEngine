@@ -4,6 +4,7 @@ using RogueLikeEngine.Optimization.Pooling;
 using RogueLikeEngine.Systems.Entities;
 using RogueLikeEngine.Systems.Entities.Effects;
 using RogueLikeEngine.Systems.Weapons;
+using RogueLikeEngine.Utils.Timers;
 
 namespace RogueLikeEngine.Tests
 {
@@ -219,6 +220,20 @@ namespace RogueLikeEngine.Tests
             Assert.AreEqual(1, copy.durationEndedCount);
             Assert.AreEqual(1, copy.updateCount, "A removed effect must not be updated again");
             Assert.AreNotSame(copy, Apply(template), "The expired effect should have been removed");
+        }
+
+        [Test]
+        public void Update_EffectWithoutUpdateHook_StillExpires()
+        {
+            EffectScriptableObject template = m_objects.CreateAsset<EffectScriptableObject>();
+            TestReflection.SetField(template, "effectName", "Plain");
+            TestReflection.SetField(template, "duration", (AutoTimer)0f);
+            m_entity.AddEffect(template);
+            EffectScriptableObject copy = m_objects.Track((EffectScriptableObject)m_addedCopies[^1]);
+
+            TestReflection.Invoke(m_entity, "Update");
+
+            Assert.IsFalse(copy, "The expired effect's copy should have been removed and destroyed");
         }
 
         [Test]

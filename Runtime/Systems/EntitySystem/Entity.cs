@@ -28,6 +28,9 @@ namespace RogueLikeEngine.Systems.Entities
         public event Action<IEffect> OnEffectAdded;
 
         private IDictionary<int, IEffect> Effects { get; set; } = new Dictionary<int, IEffect>();
+        private readonly List<IOnUpdate> m_updateEffects = new();
+        private readonly List<IOnFixedUpdate> m_fixedUpdateEffects = new();
+        private readonly List<IOnHit> m_hitEffects = new();
 
         /// <summary>True once the starting effects have been applied at least once (e.g. after Start).</summary>
         private bool StartingEffectsApplied { get; set; }
@@ -65,6 +68,7 @@ namespace RogueLikeEngine.Systems.Entities
             {
                 IEffect copy = effect.GetCopy();
                 Effects[copy.ID] = copy;
+                RegisterHooks(copy);
                 copy.Init(this);
                 if (damageOwnerOverride) copy.DamageOwner = damageOwnerOverride;
                 OnEffectAdded?.Invoke(copy);
@@ -81,6 +85,7 @@ namespace RogueLikeEngine.Systems.Entities
 
             // Remove first so the callback can safely add/remove effects
             Effects.Remove(effect.ID);
+            UnregisterHooks(internalCopy);
             if (triggerDurationEnded && internalCopy is IOnDurationEnded onDurationEnded)
                 onDurationEnded.OnDurationEnded(this);
             DestroyCopy(internalCopy);
@@ -101,15 +106,20 @@ namespace RogueLikeEngine.Systems.Entities
         protected virtual void Update()
         {
             if (Effects.Count == 0) return;
-            // Iterate a snapshot: effect callbacks may add or remove effects
+            using (ListPool<IOnUpdate>.Get(out List<IOnUpdate> updates))
+            {
+                updates.AddRange(m_updateEffects);
+                foreach (IOnUpdate effect in updates)
+                {
+                    if (m_updateEffects.Contains(effect)) effect.OnUpdate(this);
+                }
+            }
+
             using (ListPool<IEffect>.Get(out List<IEffect> snapshot))
             {
                 snapshot.AddRange(Effects.Values);
                 foreach (IEffect effect in snapshot)
                 {
-                    if (!IsApplied(effect)) continue;
-                    if (effect is IOnUpdate onUpdate)
-                        onUpdate.OnUpdate(this);
                     if (IsApplied(effect) && effect.DurationTimer.IsFinished)
                         RemoveEffect(effect, true);
                 }
@@ -118,30 +128,42 @@ namespace RogueLikeEngine.Systems.Entities
 
         private void FixedUpdate()
         {
-            if (Effects.Count == 0) return;
-            using (ListPool<IEffect>.Get(out List<IEffect> snapshot))
+            if (m_fixedUpdateEffects.Count == 0) return;
+            using (ListPool<IOnFixedUpdate>.Get(out List<IOnFixedUpdate> fixedUpdates))
             {
-                snapshot.AddRange(Effects.Values);
-                foreach (IEffect effect in snapshot)
+                fixedUpdates.AddRange(m_fixedUpdateEffects);
+                foreach (IOnFixedUpdate effect in fixedUpdates)
                 {
-                    if (IsApplied(effect) && effect is IOnFixedUpdate onFixedUpdate)
-                        onFixedUpdate.OnFixedUpdate(this);
+                    if (m_fixedUpdateEffects.Contains(effect)) effect.OnFixedUpdate(this);
                 }
             }
         }
 
         protected virtual void OnCollisionEnter2D(Collision2D other)
         {
-            if (Effects.Count == 0) return;
-            using (ListPool<IEffect>.Get(out List<IEffect> snapshot))
+            if (m_hitEffects.Count == 0) return;
+            using (ListPool<IOnHit>.Get(out List<IOnHit> hits))
             {
-                snapshot.AddRange(Effects.Values);
-                foreach (IEffect effect in snapshot)
+                hits.AddRange(m_hitEffects);
+                foreach (IOnHit effect in hits)
                 {
-                    if (IsApplied(effect) && effect is IOnHit onHit)
-                        onHit.OnHit(this, other);
+                    if (m_hitEffects.Contains(effect)) effect.OnHit(this, other);
                 }
             }
+        }
+
+        private void RegisterHooks(IEffect effect)
+        {
+            if (effect is IOnUpdate onUpdate) m_updateEffects.Add(onUpdate);
+            if (effect is IOnFixedUpdate onFixedUpdate) m_fixedUpdateEffects.Add(onFixedUpdate);
+            if (effect is IOnHit onHit) m_hitEffects.Add(onHit);
+        }
+
+        private void UnregisterHooks(IEffect effect)
+        {
+            if (effect is IOnUpdate onUpdate) m_updateEffects.Remove(onUpdate);
+            if (effect is IOnFixedUpdate onFixedUpdate) m_fixedUpdateEffects.Remove(onFixedUpdate);
+            if (effect is IOnHit onHit) m_hitEffects.Remove(onHit);
         }
 
         private static void DestroyCopy(object copy)
