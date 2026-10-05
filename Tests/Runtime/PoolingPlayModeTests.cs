@@ -113,15 +113,7 @@ namespace RogueLikeEngine.Tests.PlayMode
         [UnityTest]
         public IEnumerator ProjectileHittingHealth_DamagesItAndReturnsToPool()
         {
-            GameObject target = CreateTemplate("Target");
-            target.transform.position = new Vector3(2, 0, 0);
-            target.AddComponent<BoxCollider2D>();
-            Entity targetEntity = target.AddComponent<Entity>();
-            Health health = target.AddComponent<Health>();
-            SetField(health, "m_entity", targetEntity);
-            SetField(health, "m_maxHealth", 100);
-            SetField(health, "m_destroyEntityOnDeath", false);
-            target.SetActive(true);
+            Health health = CreateHealthEntity("Target", new Vector3(2, 0, 0)).GetComponent<Health>();
 
             Projectile projectile = Request(CreateProjectilesPool());
             projectile.transform.position = Vector3.zero;
@@ -135,6 +127,44 @@ namespace RogueLikeEngine.Tests.PlayMode
             Assert.AreEqual(90, health.CurrentHealth);
             Assert.IsTrue(projectile, "The projectile must go back to its pool, not be destroyed");
             Assert.IsFalse(projectile.gameObject.activeSelf);
+        }
+
+        [UnityTest]
+        public IEnumerator ProjectileHittingItsOwner_DealsNoDamageAndReturnsToPool()
+        {
+            Entity owner = CreateHealthEntity("Owner", new Vector3(2, 0, 0));
+            Health ownerHealth = owner.GetComponent<Health>();
+            yield return new WaitForFixedUpdate();
+
+            Projectile projectile = Request(CreateProjectilesPool());
+            projectile.transform.position = Vector3.zero;
+            projectile.Owner = owner;
+            projectile.Damage = new Damage(10);
+            projectile.SetDirection(Vector2.right);
+
+            float timeout = Time.time + 2f;
+            while (projectile.gameObject.activeSelf && Time.time < timeout)
+                yield return new WaitForFixedUpdate();
+
+            Assert.AreEqual(100, ownerHealth.CurrentHealth, "A projectile must never damage its owner");
+            Assert.IsFalse(projectile.gameObject.activeSelf, "The projectile should still be removed on hitting its owner");
+            Assert.IsNull(projectile.Owner, "The owner is cleared when the projectile returns to its pool");
+        }
+
+        /// <summary>Entity with a box collider and a Health of 100, wired both ways like the editor's "Assign all components".</summary>
+        private Entity CreateHealthEntity(string name, Vector3 position)
+        {
+            GameObject go = CreateTemplate(name);
+            go.transform.position = position;
+            go.AddComponent<BoxCollider2D>();
+            Entity entity = go.AddComponent<Entity>();
+            Health health = go.AddComponent<Health>();
+            SetField(entity, "m_health", health);
+            SetField(health, "m_entity", entity);
+            SetField(health, "m_maxHealth", 100);
+            SetField(health, "m_destroyEntityOnDeath", false);
+            go.SetActive(true);
+            return entity;
         }
 
         [UnityTest]

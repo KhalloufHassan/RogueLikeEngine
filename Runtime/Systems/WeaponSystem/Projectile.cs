@@ -8,6 +8,7 @@ namespace RogueLikeEngine.Systems.Weapons
     public class Projectile : Entity,IPoolObject
     {
         public WeaponInstance Weapon { get; set; }
+        public Entity Owner { get; set; }
         public Damage Damage { get; set; }
         public float Range { get; set; }
         public void SetDirection(Vector2 direction) => Movement.Move(direction);
@@ -22,8 +23,9 @@ namespace RogueLikeEngine.Systems.Weapons
         {
             if (IsDisposed) return;
             base.OnCollisionEnter2D(other);
-            Health health = other.gameObject.GetComponent<Health>();
-            if (health)
+            Entity target = other.gameObject.GetComponentInParent<Entity>();
+            IHealth health = target && target != Owner ? target.Health : null;
+            if (health != null)
             {
                 health.TakeDamage(Damage);
                 if (Weapon != null) Weapon.DamageDealt += Damage.Value;
@@ -56,6 +58,7 @@ namespace RogueLikeEngine.Systems.Weapons
             ClearEffects(true);
             Movement?.ResetTraveledDistance();
             Weapon = null;
+            Owner = null;
             transform.position = new Vector2(10000, 10000);
         }
         
