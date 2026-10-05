@@ -9,7 +9,7 @@ namespace RogueLikeEngine.Utils.Timers
         public float timerDuration;
         public float resetTimeStamp;
 
-        public float Percentage => Mathf.Clamp(TimeLeft / timerDuration, 0, 1);
+        public float Percentage => timerDuration > 0 ? Mathf.Clamp01(TimeLeft / timerDuration) : 0;
         public float TimeDiff => Time.timeSinceLevelLoad - resetTimeStamp;
         public float TimeLeft => timerDuration - TimeDiff;
 

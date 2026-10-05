@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 using RogueLikeEngine.Attributes;
 using RogueLikeEngine.Extensions;
 using UnityEditor;
@@ -38,9 +39,7 @@ public class ConditionalDrawer : PropertyDrawer
             return true;
         }
 
-        FieldInfo conditionField = parentObject.GetType().GetField(
-            showIf.ConditionFieldName,
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        FieldInfo conditionField = FindField(parentObject.GetType(), showIf.ConditionFieldName);
 
         if (conditionField == null)
         {
@@ -65,6 +64,18 @@ public class ConditionalDrawer : PropertyDrawer
         }
 
         return showIf.Inverse ? !shouldShow : shouldShow;
+    }
+
+    /// <summary>Also searches base classes, GetField alone doesn't return private fields declared in a base class.</summary>
+    private static FieldInfo FindField(Type type, string fieldName)
+    {
+        for (; type != null; type = type.BaseType)
+        {
+            FieldInfo field = type.GetField(fieldName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+            if (field != null) return field;
+        }
+
+        return null;
     }
 }
 

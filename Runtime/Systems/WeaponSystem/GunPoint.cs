@@ -8,10 +8,12 @@ namespace RogueLikeEngine.Systems.Weapons
         [SerializeField] private WeaponsSystem weaponsSystem;
         [SerializeField] private Transform shootingTransform;
         [SerializeField] private WeaponData weaponData;
+        [Tooltip("Distance from the weapons system's position, along the aim direction")]
+        [SerializeField] private float m_distanceFromOwner = 0.75f;
 
         public WeaponInstance CurrentWeapon { get; private set; }
-        public bool CanFire => IsOnCoolDown;
-        public bool IsOnCoolDown => m_coolDownTimer.IsFinished;
+        public bool CanFire => !IsOnCooldown;
+        public bool IsOnCooldown => !m_coolDownTimer.IsFinished;
 
         private AutoTimer m_coolDownTimer;
 
@@ -26,7 +28,7 @@ namespace RogueLikeEngine.Systems.Weapons
         private void Update()
         {
             float angle = Mathf.Atan2(weaponsSystem.AimDirection.y, weaponsSystem.AimDirection.x);
-            Vector2 offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * .75f;
+            Vector2 offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * m_distanceFromOwner;
             transform.position = (Vector2)weaponsSystem.transform.position + offset;
             transform.right = offset;
             

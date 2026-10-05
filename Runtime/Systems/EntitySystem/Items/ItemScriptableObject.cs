@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using RogueLikeEngine.Attributes;
 using RogueLikeEngine.Systems.Entities.Effects;
 using RogueLikeEngine.Systems.Stats;
@@ -19,8 +20,8 @@ namespace RogueLikeEngine.Systems.Entities.Items
         public string Name => itemName;
         public string Description => description;
         public Sprite Icon => icon;
-        public IEnumerable<IStatModifier> Modifiers => modifiers;
-        public IEnumerable<IEffect> Effects => effects;
+        public IEnumerable<IStatModifier> Modifiers => modifiers ?? Array.Empty<IStatModifier>();
+        public IEnumerable<IEffect> Effects => effects ?? Array.Empty<IEffect>();
 
         public IItem GetCopy() => Instantiate(this);
     }

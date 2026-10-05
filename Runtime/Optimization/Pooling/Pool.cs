@@ -38,8 +38,10 @@ public class Pool<T> : ScriptableObject,IPool where T : Component, IPoolObject
             InitializePool();
         T obj = _pool?.Get();
         if(obj)
+        {
             obj.IsDisposed = false;
-        if (disposeAllActiveOnSceneReload) m_activeObjects.Add(obj);
+            if (disposeAllActiveOnSceneReload) m_activeObjects.Add(obj);
+        }
         return obj;
     }
     

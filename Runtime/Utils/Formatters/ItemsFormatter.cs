@@ -13,6 +13,8 @@ namespace DefaultNamespace.RogueLikeEngine.Utils.Formatters
 
             foreach (IStatModifier modifier in modifiers)
             {
+                if (modifier?.TargetStat == null) continue;
+
                 string formattedText = modifier switch
                 {
                     StatLinkModifier linkMod => FormatLinkModifier(linkMod,simulateStore),

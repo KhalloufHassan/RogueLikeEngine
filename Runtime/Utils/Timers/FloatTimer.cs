@@ -10,7 +10,7 @@ namespace RogueLikeEngine.Utils.Timers
         public float timeLeft;
 
         public bool IsFinished => timeLeft <= 0;
-        public float Percentage => Mathf.Clamp(timeLeft / timerDuration, 0, 1);
+        public float Percentage => timerDuration > 0 ? Mathf.Clamp01(timeLeft / timerDuration) : 0;
 
         public static implicit operator FloatTimer(float duration)
         {

@@ -24,11 +24,12 @@ namespace RogueLikeEngine.Systems.Stats
 
         private void InitializeStore()
         {
-            Debug.Log("Init");
             Store = new();
+            if (m_startingModifiers == null) return;
+
             foreach (IStatModifier modifier in m_startingModifiers)
             {
-                Store.AddModifier(modifier);
+                if (modifier?.TargetStat) Store.AddModifier(modifier);
             }
         }
         

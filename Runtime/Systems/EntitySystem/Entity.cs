@@ -6,6 +6,7 @@ using RogueLikeEngine.Systems.Healths;
 using RogueLikeEngine.Systems.Movements;
 using RogueLikeEngine.Systems.Stats;
 using RogueLikeEngine.Systems.Weapons;
+using RogueLikeEngine.Utils;
 using UnityEngine;
 using UnityEngine.Pool;
 
@@ -65,6 +66,7 @@ namespace RogueLikeEngine.Systems.Entities
                 IEffect copy = effect.GetCopy();
                 Effects[copy.ID] = copy;
                 copy.Init(this);
+                if (damageOwnerOverride) copy.DamageOwner = damageOwnerOverride;
                 OnEffectAdded?.Invoke(copy);
             }
         }
@@ -81,6 +83,7 @@ namespace RogueLikeEngine.Systems.Entities
             Effects.Remove(effect.ID);
             if (triggerDurationEnded && internalCopy is IOnDurationEnded onDurationEnded)
                 onDurationEnded.OnDurationEnded(this);
+            DestroyCopy(internalCopy);
         }
 
         /// <summary>Removes every applied effect.</summary>
@@ -141,6 +144,11 @@ namespace RogueLikeEngine.Systems.Entities
             }
         }
 
+        private static void DestroyCopy(object copy)
+        {
+            if (copy is UnityEngine.Object unityCopy) UnityObjectUtility.DestroySafely(unityCopy);
+        }
+
         private bool IsApplied(IEffect effect) => Effects.TryGetValue(effect.ID, out IEffect current) && ReferenceEquals(current, effect);
 
         public void AllSystemsActive(bool isActive)
@@ -155,6 +163,11 @@ namespace RogueLikeEngine.Systems.Entities
         public virtual void DestroyEntity()
         {
             Destroy(gameObject);
+        }
+
+        protected virtual void OnDestroy()
+        {
+            ClearEffects(false);
         }
 
         //TODO this should be in a manager

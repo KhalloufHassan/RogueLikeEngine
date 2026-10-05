@@ -23,6 +23,14 @@ namespace RogueLikeEngine.Systems.Stats
             m_linkedStat.AddStatLink(m_statLink);
         }
 
+        public override void Unconfigure()
+        {
+            m_linkedStat?.RemoveStatLink(m_statLink);
+            m_linkedStat = null;
+            m_statLink = null;
+            base.Unconfigure();
+        }
+
         public override float PreviewValueFor(StatsStore statsStore)
         {
             if (statsStore == null || !linkedStatDefinition) return 0;

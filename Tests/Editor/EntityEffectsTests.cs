@@ -90,6 +90,71 @@ namespace RogueLikeEngine.Tests
         }
 
         [Test]
+        public void RemoveEffect_DestroysTheCopy_NotTheTemplate()
+        {
+            TestEffect template = TestEffect.Create(m_objects, "Burn");
+            TestEffect copy = Apply(template);
+
+            m_entity.RemoveEffect(template, true);
+
+            Assert.IsFalse(copy, "The removed copy should have been destroyed");
+            Assert.IsTrue(template, "The template must never be destroyed");
+        }
+
+        [Test]
+        public void ExpiredEffect_DestroysTheCopy()
+        {
+            TestEffect copy = Apply(TestEffect.Create(m_objects, "Burn", durationSeconds: 0));
+
+            TestReflection.Invoke(m_entity, "Update");
+
+            Assert.IsFalse(copy);
+        }
+
+        [Test]
+        public void DestroyingTheEntity_ReleasesCopiesWithoutEndingThem()
+        {
+            TestEffect copy = Apply(TestEffect.Create(m_objects, "Burn"));
+
+            // Unity doesn't send OnDestroy in edit mode, so it's called directly like Update
+            TestReflection.Invoke(m_entity, "OnDestroy");
+
+            Assert.IsFalse(copy, "The copy should be destroyed with the entity");
+            Assert.AreEqual(0, copy.durationEndedCount, "Dying must not fire OnDurationEnded");
+        }
+
+        [Test]
+        public void DamageOwner_DefaultsToTheAffectedEntity()
+        {
+            TestEffect copy = Apply(TestEffect.Create(m_objects, "Burn"));
+
+            Assert.AreSame(m_entity, copy.DamageOwner);
+        }
+
+        [Test]
+        public void DamageOwner_IsTheEntityThatAppliedTheEffect()
+        {
+            Entity attacker = m_objects.CreateComponent<Entity>("Attacker");
+
+            m_entity.AddEffect(TestEffect.Create(m_objects, "Burn"), attacker);
+
+            Assert.AreSame(attacker, m_addedCopies[^1].DamageOwner);
+        }
+
+        [Test]
+        public void DamageOwner_StackingKeepsTheFirstOwner()
+        {
+            Entity first = m_objects.CreateComponent<Entity>("First");
+            Entity second = m_objects.CreateComponent<Entity>("Second");
+            TestEffect template = TestEffect.Create(m_objects, "Burn");
+
+            m_entity.AddEffect(template, first);
+            m_entity.AddEffect(template, second);
+
+            Assert.AreSame(first, m_addedCopies[^1].DamageOwner);
+        }
+
+        [Test]
         public void RemoveEffect_NotApplied_DoesNotThrow()
         {
             TestEffect template = TestEffect.Create(m_objects, "Burn");

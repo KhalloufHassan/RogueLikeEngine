@@ -3,12 +3,13 @@
   "version": "0.0.1",
   "displayName": "Rogue Like Engine",
   "description": "A reusable C# Rogue Like Engine for Unity.",
-  "unity": "6.0",
+  "unity": "6000.0",
   "author": {
     "name": "Hassan Khallouf",
-    "url": "https://github.com/yourname"
+    "url": "https://github.com/KhalloufHassan"
   },
   "dependencies": {
-    "com.unity.inputsystem": "1.14.0"
+    "com.unity.inputsystem": "1.17.0",
+    "com.unity.ugui": "2.0.0"
   }
 }

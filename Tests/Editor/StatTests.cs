@@ -229,6 +229,59 @@ namespace RogueLikeEngine.Tests
         }
 
         [Test]
+        public void StatLink_RemovedModifier_UnregistersItsLink()
+        {
+            StatLinkModifier link = CreateLink(rate: 2);
+            m_store.AddModifier(link);
+            Assert.AreEqual(1, Strength.StatLinks.Count);
+
+            m_store.RemoveModifier(link);
+            m_store.AddModifier(new TestModifier(m_strength, 5));
+
+            Assert.AreEqual(0, Strength.StatLinks.Count);
+            Assert.AreEqual(0, Damage.FinalValue);
+        }
+
+        [Test]
+        public void StatLink_ReAddedModifier_LinksAgain()
+        {
+            StatLinkModifier link = CreateLink(rate: 2);
+            m_store.AddModifier(link);
+            m_store.RemoveModifier(link);
+
+            m_store.AddModifier(link);
+            m_store.AddModifier(new TestModifier(m_strength, 5));
+
+            Assert.AreEqual(1, Strength.StatLinks.Count);
+            Assert.AreEqual(10, Damage.FinalValue);
+        }
+
+        [Test]
+        public void GlobalStatsStore_NewAssetWithoutStartingModifiers_HasAnEmptyStore()
+        {
+            GlobalStatsStore store = null;
+
+            Assert.DoesNotThrow(() => store = m_objects.CreateAsset<GlobalStatsStore>());
+            Assert.IsNotNull(store.Store);
+        }
+
+        [Test]
+        public void GlobalStatsStore_AppliesStartingModifiersAndSkipsUnfinishedOnes()
+        {
+            GlobalStatsStore store = m_objects.CreateAsset<GlobalStatsStore>();
+            TestReflection.SetField(store, "m_startingModifiers", new IStatModifier[]
+            {
+                null,
+                new TestModifier(null, 99),
+                new TestModifier(m_damage, 4)
+            });
+
+            TestReflection.Invoke(store, "InitializeStore");
+
+            Assert.AreEqual(4, store.Store.GetOrCreateStat(m_damage).FinalValue);
+        }
+
+        [Test]
         public void PreviewModifierValue_ReturnsContributionWithoutChangingState()
         {
             m_store.AddModifier(new TestModifier(m_strength, 5));

@@ -98,6 +98,8 @@ namespace RogueLikeEngine.Systems.Stats
 
 
         public void AddStatLink(StatLink statLink) => (StatLinks ??= new List<StatLink>()).Add(statLink);
+
+        public bool RemoveStatLink(StatLink statLink) => StatLinks?.Remove(statLink) ?? false;
         
         public StatLink GetStatLinkFor(Stat stat) => StatLinks?.FirstOrDefault(sl => sl.DependentStat == stat);
         

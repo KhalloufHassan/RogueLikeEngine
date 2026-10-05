@@ -11,7 +11,7 @@ namespace RogueLikeEngine.Utils.Randomizers
 
         public T GetRandomElement()
         {
-            if (Elements.Count == 0) return default;
+            if (Elements == null || Elements.Count == 0) return default;
             int totalWeight = Elements.Sum(e => e.Weight);
             int randomWeight = UnityEngine.Random.Range(0, totalWeight);
             foreach (var weightedElement in Elements)

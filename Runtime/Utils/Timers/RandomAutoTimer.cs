@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using RogueLikeEngine.Utils.Randomizers;
+using UnityEngine;
 
 namespace RogueLikeEngine.Utils.Timers
 {
@@ -7,22 +8,20 @@ namespace RogueLikeEngine.Utils.Timers
     public struct RandomAutoTimer
     {
         public RandomFloatRange randomRange;
-        public long resetTimeTicks;
+        public float resetTimeStamp;
         public float timerDuration;
-    
-        public TimeSpan TimeDiff => DateTime.Now - new DateTime(resetTimeTicks);
-        public double TimeLeft => timerDuration - TimeDiff.TotalSeconds;
-        public bool IsFinished => TimeDiff.TotalSeconds >= timerDuration;
 
+        public float TimeDiff => Time.timeSinceLevelLoad - resetTimeStamp;
+        public float TimeLeft => timerDuration - TimeDiff;
+        public bool IsFinished => TimeDiff >= timerDuration;
     }
 
     public static class RandomAutoTimerExtensions
     {
         public static void Reset(this ref RandomAutoTimer timer)
         {
-            timer.resetTimeTicks = DateTime.Now.Ticks;
+            timer.resetTimeStamp = Time.timeSinceLevelLoad;
             timer.timerDuration = timer.randomRange.GetRandom();
         }
-    } 
+    }
 }
-

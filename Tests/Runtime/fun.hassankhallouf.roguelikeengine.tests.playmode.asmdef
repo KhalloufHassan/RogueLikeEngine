@@ -1,0 +1,23 @@
+{
+    "name": "fun.hassankhallouf.roguelikeengine.tests.playmode",
+    "rootNamespace": "RogueLikeEngine.Tests.PlayMode",
+    "references": [
+        "GUID:de40235f0820ef943ba4a38c8bd6ae39",
+        "Unity.TextMeshPro",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
