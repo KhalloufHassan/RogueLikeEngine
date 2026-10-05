@@ -30,18 +30,18 @@ namespace RogueLikeEngine.Systems.Entities
         private IDictionary<int, IEffect> Effects { get; set; } = new Dictionary<int, IEffect>();
 
         /// <summary>True once the starting effects have been applied at least once (e.g. after Start).</summary>
-        protected bool StartingEffectsApplied { get; private set; }
+        private bool StartingEffectsApplied { get; set; }
 
         private void Start()
         {
-            ApplyStartingEffect();
+            if (!StartingEffectsApplied) ApplyStartingEffect();
         }
 
         /// <summary>
         /// Applies the configured starting effects. The array is kept intact so the effects can be re-applied,
         /// e.g. when a pooled entity is reused, effects already present are stacked instead of duplicated.
         /// </summary>
-        protected void ApplyStartingEffect()
+        public void ApplyStartingEffect()
         {
             if (m_startingEffects != null)
             {

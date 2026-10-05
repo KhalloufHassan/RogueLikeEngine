@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using RogueLikeEngine.Systems.Stats;
-using DefaultNamespace.RogueLikeEngine.Utils.Formatters;
+using RogueLikeEngine.Utils.Formatters;
 using RogueLikeEngine.Utils.Randomizers;
 using RogueLikeEngine.Utils.Timers;
 

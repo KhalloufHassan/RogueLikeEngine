@@ -61,6 +61,17 @@ namespace RogueLikeEngine.Tests
         }
 
         [Test]
+        public void ProjectileSpeed_IsScaledByTheSpeedStatAsAPercentage()
+        {
+            m_weapon.baseProjectileSpeed = 10;
+            StatDefinition speedStat = m_objects.CreateAsset<StatDefinition>();
+            TestReflection.SetField(m_weaponsSystem, "m_projectileSpeedStatDefinition", speedStat);
+            AddFlat(speedStat, 50);
+
+            Assert.AreEqual(15f, m_weaponsSystem.CalculatedProjectileSpeed(m_weapon));
+        }
+
+        [Test]
         public void MissingStatDefinitions_FallBackToBaseValues()
         {
             m_weapon.damageStat = null;
@@ -68,6 +79,7 @@ namespace RogueLikeEngine.Tests
             Assert.AreEqual(3, m_weaponsSystem.CalculatedProjectileDamage(m_weapon));
             Assert.AreEqual(2f, m_weaponsSystem.CalculatedFireRate(m_weapon));
             Assert.AreEqual(10f, m_weaponsSystem.CalculatedProjectileRange(m_weapon));
+            Assert.AreEqual(m_weapon.baseProjectileSpeed, m_weaponsSystem.CalculatedProjectileSpeed(m_weapon));
         }
 
         private void AddFlat(StatDefinition stat, float value) => m_entity.StatsStore.AddModifier(TestModifiers.Flat(stat, value));

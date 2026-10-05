@@ -6,7 +6,6 @@ using NUnit.Framework;
 using RogueLikeEngine.Optimization.Pooling;
 using RogueLikeEngine.Systems.Entities;
 using RogueLikeEngine.Systems.Healths;
-using RogueLikeEngine.Systems.Movements;
 using RogueLikeEngine.Systems.Weapons;
 using TMPro;
 using UnityEngine;
@@ -44,24 +43,20 @@ namespace RogueLikeEngine.Tests.PlayMode
             return template;
         }
 
-        private Projectile CreateProjectileTemplate()
+        private Projectile CreateProjectileTemplate(bool withEntity = false)
         {
             GameObject go = CreateTemplate("ProjectileTemplate");
-            Rigidbody2D body = go.AddComponent<Rigidbody2D>();
-            body.gravityScale = 0;
+            go.AddComponent<Rigidbody2D>().gravityScale = 0;
             go.AddComponent<CircleCollider2D>().radius = 0.1f;
             Projectile projectile = go.AddComponent<Projectile>();
-            Movement movement = go.AddComponent<Movement>();
-            SetField(projectile, "m_movement", movement);
-            SetField(movement, "m_entity", projectile);
-            SetField(movement, "m_rigidbody", body);
+            if (withEntity) go.AddComponent<Entity>();
             return projectile;
         }
 
-        private ProjectilesPool CreateProjectilesPool()
+        private ProjectilesPool CreateProjectilesPool(bool withEntity = false)
         {
             ProjectilesPool pool = Track(ScriptableObject.CreateInstance<ProjectilesPool>());
-            pool.prefab = CreateProjectileTemplate();
+            pool.prefab = CreateProjectileTemplate(withEntity);
             return pool;
         }
 
@@ -70,6 +65,7 @@ namespace RogueLikeEngine.Tests.PlayMode
             Projectile projectile = pool.Request();
             Track(projectile.transform.parent.gameObject); // the pool root, kept alive by DontDestroyOnLoad
             projectile.Range = 1000;
+            projectile.Speed = 10;
             return projectile;
         }
 
@@ -80,9 +76,9 @@ namespace RogueLikeEngine.Tests.PlayMode
             Projectile first = Request(pool);
             first.SetDirection(Vector2.right);
             yield return new WaitForSeconds(0.1f);
-            Assert.Greater(first.Movement.TraveledDistance, 0f);
+            Assert.Greater(first.TraveledDistance, 0f);
 
-            first.DestroyEntity();
+            first.Despawn();
             yield return null;
 
             Assert.IsTrue(first, "A pooled projectile must not be destroyed");
@@ -92,7 +88,7 @@ namespace RogueLikeEngine.Tests.PlayMode
 
             Assert.AreSame(first, second);
             Assert.IsTrue(second.gameObject.activeSelf);
-            Assert.AreEqual(0f, second.Movement.TraveledDistance);
+            Assert.AreEqual(0f, second.TraveledDistance);
         }
 
         [UnityTest]
@@ -149,6 +145,25 @@ namespace RogueLikeEngine.Tests.PlayMode
             Assert.AreEqual(100, ownerHealth.CurrentHealth, "A projectile must never damage its owner");
             Assert.IsFalse(projectile.gameObject.activeSelf, "The projectile should still be removed on hitting its owner");
             Assert.IsNull(projectile.Owner, "The owner is cleared when the projectile returns to its pool");
+        }
+
+        [UnityTest]
+        public IEnumerator ProjectileWithEntity_RunsItsOnHitEffects_BeforeReturningToPool()
+        {
+            CreateHealthEntity("Target", new Vector3(2, 0, 0));
+            Projectile projectile = Request(CreateProjectilesPool(withEntity: true));
+            HitCountingEffect effect = null;
+            projectile.Entity.OnEffectAdded += e => effect = Track((HitCountingEffect)e);
+            projectile.Entity.AddEffect(Track(ScriptableObject.CreateInstance<HitCountingEffect>()));
+            projectile.transform.position = Vector3.zero;
+            projectile.SetDirection(Vector2.right);
+
+            float timeout = Time.time + 2f;
+            while (projectile.gameObject.activeSelf && Time.time < timeout)
+                yield return new WaitForFixedUpdate();
+
+            Assert.AreEqual(1, effect.hits, "The projectile's own effects must see the hit that ends it");
+            Assert.IsFalse(projectile.gameObject.activeSelf);
         }
 
         /// <summary>Entity with a box collider and a Health of 100, wired both ways like the editor's "Assign all components".</summary>

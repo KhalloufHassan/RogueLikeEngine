@@ -19,6 +19,7 @@ namespace RogueLikeEngine.Systems.Weapons
             Projectile projectile = WeaponData.projectilesPool ? WeaponData.projectilesPool.Request() : Object.Instantiate(WeaponData.projectilePrefab);
             projectile.Damage = new Damage(ownerSystem.CalculatedProjectileDamage(WeaponData));
             projectile.Range = ownerSystem.CalculatedProjectileRange(WeaponData);
+            projectile.Speed = ownerSystem.CalculatedProjectileSpeed(WeaponData);
             projectile.Weapon = this;
             projectile.Owner = ownerSystem.Entity;
             ProjectilesFired++;

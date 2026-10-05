@@ -20,5 +20,6 @@ namespace RogueLikeEngine.Systems.Weapons
         int CalculatedProjectileDamage(WeaponData weaponData);
         float CalculatedFireRate(WeaponData weaponData);
         float CalculatedProjectileRange(WeaponData weaponData);
+        float CalculatedProjectileSpeed(WeaponData weaponData);
     }
 }

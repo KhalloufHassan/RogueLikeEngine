@@ -15,6 +15,7 @@ namespace RogueLikeEngine.Systems.Weapons
         public int baseDamage;
         public float baseFireRate;
         public float baseRange;
+        public float baseProjectileSpeed = 10;
         public ProjectilesPool projectilesPool;
         [HideIf(nameof(projectilesPool))]
         public Projectile projectilePrefab;

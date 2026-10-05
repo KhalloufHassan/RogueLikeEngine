@@ -8,6 +8,7 @@ namespace RogueLikeEngine.Systems.Weapons
     {
         [SerializeField] private StatDefinition m_fireRateStatDefinition;
         [SerializeField] private StatDefinition m_rangeStatDefinition;
+        [SerializeField] private StatDefinition m_projectileSpeedStatDefinition;
         [SerializeField] private GunPoint m_gunPoint;
 
         public virtual WeaponInstance CurrentWeapon => m_gunPoint.CurrentWeapon;
@@ -42,6 +43,7 @@ namespace RogueLikeEngine.Systems.Weapons
         public int CalculatedProjectileDamage(WeaponData weaponData) => weaponData.baseDamage + GetStatValue(weaponData.damageStat);
         public float CalculatedFireRate(WeaponData weaponData) => weaponData.baseFireRate + weaponData.baseFireRate * (GetStatValue(m_fireRateStatDefinition) / 100f);
         public float CalculatedProjectileRange(WeaponData weaponData) => weaponData.baseRange + GetStatValue(m_rangeStatDefinition);
+        public float CalculatedProjectileSpeed(WeaponData weaponData) => weaponData.baseProjectileSpeed + weaponData.baseProjectileSpeed * (GetStatValue(m_projectileSpeedStatDefinition) / 100f);
 
         /// <summary>Returns the entity's value for the stat, or 0 when no stat definition is assigned.</summary>
         private int GetStatValue(StatDefinition statDefinition) => statDefinition ? Entity.StatsStore.GetOrCreateStat(statDefinition).FinalValue : 0;

@@ -261,14 +261,14 @@ namespace RogueLikeEngine.Tests
         }
 
         [Test]
-        public void Projectile_WithPool_DestroyEntity_ReturnsToPool()
+        public void Projectile_WithPool_Despawn_ReturnsToPool()
         {
             Projectile projectile = m_objects.CreateComponent<Projectile>();
             FakePool pool = new();
             projectile.ParentPool = pool;
 
             // In edit mode a Destroy call would log an error and fail this test
-            projectile.DestroyEntity();
+            projectile.Despawn();
 
             Assert.AreEqual(1, pool.Returned.Count);
             Assert.AreSame(projectile, pool.Returned[0]);
@@ -276,19 +276,33 @@ namespace RogueLikeEngine.Tests
         }
 
         [Test]
-        public void Projectile_OnDisposed_ClearsEffectsAndWeapon()
+        public void Projectile_OnDisposed_ClearsItsEntityEffectsWeaponAndOwner()
         {
             Projectile projectile = m_objects.CreateComponent<Projectile>();
+            Entity projectileEntity = projectile.gameObject.AddComponent<Entity>();
+            TestReflection.Invoke(projectile, "Awake");
             List<IEffect> copies = new();
-            projectile.OnEffectAdded += copies.Add;
-            projectile.AddEffect(TestEffect.Create(m_objects, "Burn"));
+            projectileEntity.OnEffectAdded += copies.Add;
+            projectileEntity.AddEffect(TestEffect.Create(m_objects, "Burn"));
             TestEffect copy = m_objects.Track((TestEffect)copies[0]);
             projectile.Weapon = new WeaponInstance(m_objects.CreateAsset<WeaponData>());
+            projectile.Owner = m_entity;
 
             projectile.OnDisposed();
 
             Assert.AreEqual(1, copy.durationEndedCount);
             Assert.IsNull(projectile.Weapon);
+            Assert.IsNull(projectile.Owner);
+        }
+
+        [Test]
+        public void Projectile_WithoutEntity_HasNoEffectsHost()
+        {
+            Projectile projectile = m_objects.CreateComponent<Projectile>();
+            TestReflection.Invoke(projectile, "Awake");
+
+            Assert.IsNull(projectile.Entity);
+            Assert.DoesNotThrow(() => projectile.OnDisposed());
         }
 
         private class FakePool : IPool

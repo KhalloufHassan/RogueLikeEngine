@@ -1,3 +1,4 @@
+using System.Collections;
 using RogueLikeEngine.Optimization.Pooling;
 using RogueLikeEngine.Systems.Entities;
 using RogueLikeEngine.Systems.Healths;
@@ -5,24 +6,41 @@ using UnityEngine;
 
 namespace RogueLikeEngine.Systems.Weapons
 {
-    public class Projectile : Entity,IPoolObject
+    [RequireComponent(typeof(Rigidbody2D))]
+    public class Projectile : MonoBehaviour,IPoolObject
     {
         public WeaponInstance Weapon { get; set; }
-        public Entity Owner { get; set; }
         public Damage Damage { get; set; }
         public float Range { get; set; }
-        public void SetDirection(Vector2 direction) => Movement.Move(direction);
+        public float Speed { get; set; }
+        public Vector2 Direction { get; private set; }
+        public float TraveledDistance { get; private set; }
 
-        protected override void Update()
+        public Entity Owner { get; set; }
+
+        /// <summary>Optional Entity on the same object, hosting the projectile's effects.</summary>
+        public Entity Entity { get; private set; }
+
+        private Rigidbody2D m_rigidbody;
+
+        private void Awake()
         {
-            base.Update();
-            if (Movement.TraveledDistance >= Range) DestroyEntity();
+            m_rigidbody = GetComponent<Rigidbody2D>();
+            Entity = GetComponent<Entity>();
         }
 
-        protected override void OnCollisionEnter2D(Collision2D other)
+        public void SetDirection(Vector2 direction) => Direction = direction.normalized;
+
+        private void FixedUpdate()
         {
-            if (IsDisposed) return;
-            base.OnCollisionEnter2D(other);
+            m_rigidbody.linearVelocity = Direction * Speed;
+            TraveledDistance += Speed * Time.fixedDeltaTime;
+            if (TraveledDistance >= Range) Finish();
+        }
+
+        private void OnCollisionEnter2D(Collision2D other)
+        {
+            if (IsDisposed || !enabled) return;
             Entity target = other.gameObject.GetComponentInParent<Entity>();
             IHealth health = target && target != Owner ? target.Health : null;
             if (health != null)
@@ -30,16 +48,33 @@ namespace RogueLikeEngine.Systems.Weapons
                 health.TakeDamage(Damage);
                 if (Weapon != null) Weapon.DamageDealt += Damage.Value;
             }
-            DestroyEntity();
+            Finish();
+        }
+
+        /// <summary>
+        /// Stops the projectile and despawns it next frame, so every component on it (e.g. its Entity's effects)
+        /// still receives the current collision.
+        /// </summary>
+        private void Finish()
+        {
+            StartCoroutine(DespawnNextFrame());
+            enabled = false;
+            m_rigidbody.linearVelocity = Vector2.zero;
+        }
+
+        private IEnumerator DespawnNextFrame()
+        {
+            yield return null;
+            Despawn();
         }
 
         /// <summary>Pooled projectiles go back to their pool, others are destroyed.</summary>
-        public override void DestroyEntity()
+        public void Despawn()
         {
             if (ParentPool != null)
                 ParentPool.ReturnToPool(this);
             else
-                base.DestroyEntity();
+                Destroy(gameObject);
         }
 
         #region Pool Implementation
@@ -49,19 +84,20 @@ namespace RogueLikeEngine.Systems.Weapons
 
         public void OnRequested()
         {
-            // First use gets its starting effects from Start, reuses need them re-applied
-            if (StartingEffectsApplied) ApplyStartingEffect();
+            enabled = true;
+            if (Entity) Entity.ApplyStartingEffect();
         }
 
         public void OnDisposed()
         {
-            ClearEffects(true);
-            Movement?.ResetTraveledDistance();
+            if (Entity) Entity.ClearEffects(true);
+            TraveledDistance = 0;
+            Direction = Vector2.zero;
             Weapon = null;
             Owner = null;
             transform.position = new Vector2(10000, 10000);
         }
-        
+
         #endregion
 
     }
