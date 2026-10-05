@@ -3,7 +3,7 @@ using System.Text;
 using RogueLikeEngine.Systems.Stats;
 using UnityEngine;
 
-namespace DefaultNamespace.RogueLikeEngine.Utils.Formatters
+namespace RogueLikeEngine.Utils.Formatters
 {
     public static class ItemsFormatter
     {

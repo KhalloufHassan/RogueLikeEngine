@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace RogueLikeEngine.Systems.Healths
 {
-    public class Health : EntitySystem
+    public class Health : EntitySystem, IHealth
     {
         [SerializeField] private StatDefinition m_maxHealthStatDefinition;
         [SerializeField] private int m_maxHealth;

@@ -2,7 +2,7 @@
 
 namespace RogueLikeEngine.Systems.Entities
 {
-    public abstract class EntitySystem : MonoBehaviour
+    public abstract class EntitySystem : MonoBehaviour, IEntitySystem
     {
         [SerializeField] private Entity m_entity;
 

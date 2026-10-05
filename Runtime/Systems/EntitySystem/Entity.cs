@@ -21,9 +21,9 @@ namespace RogueLikeEngine.Systems.Entities
 
         public StatsStore StatsStore { get; private set; } = new();
 
-        public Movement Movement => m_movement;
-        public WeaponsSystem WeaponsSystem => m_weaponsSystem;
-        public Health Health => m_health;
+        public IMovement Movement => m_movement ? m_movement : null;
+        public IWeaponsSystem WeaponsSystem => m_weaponsSystem ? m_weaponsSystem : null;
+        public IHealth Health => m_health ? m_health : null;
 
         public event Action<IEffect> OnEffectAdded;
 
@@ -153,9 +153,9 @@ namespace RogueLikeEngine.Systems.Entities
 
         public void AllSystemsActive(bool isActive)
         {
-            if (Movement) Movement.IsSystemActive = isActive;
-            if (Health) Health.IsSystemActive = isActive;
-            if (WeaponsSystem) WeaponsSystem.IsSystemActive = isActive;
+            if (Movement != null) Movement.IsSystemActive = isActive;
+            if (Health != null) Health.IsSystemActive = isActive;
+            if (WeaponsSystem != null) WeaponsSystem.IsSystemActive = isActive;
         }
 
 

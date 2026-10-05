@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace RogueLikeEngine.Systems.Movements
 {
-    public class Movement : EntitySystem
+    public class Movement : EntitySystem, IMovement
     {
         [SerializeField] private StatDefinition m_movementSpeedStatDefinition;
         [SerializeField] private float m_turnSpeed = 500;
@@ -27,7 +27,7 @@ namespace RogueLikeEngine.Systems.Movements
         {
             if(m_movementSpeedStatDefinition)
                 m_movementSpeedStat = Entity.StatsStore.GetOrCreateStat(m_movementSpeedStatDefinition);
-            m_rotateToAimDirection = m_rotateToAimDirection && Entity.WeaponsSystem;
+            m_rotateToAimDirection = m_rotateToAimDirection && Entity.WeaponsSystem != null;
         }
 
         protected virtual void Update()

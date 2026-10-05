@@ -12,20 +12,20 @@ namespace RogueLikeEngine.Input
         private bool inputInterrupted;
         private void Update()
         {
-            if(firing && !inputInterrupted && player && player.WeaponsSystem)
+            if(firing && !inputInterrupted && player && player.WeaponsSystem != null)
                 player.WeaponsSystem.Fire();
         }
 
         public void OnMove(InputAction.CallbackContext context)
         {
-            if (inputInterrupted || !player || !player.Movement) return;
+            if (inputInterrupted || !player || player.Movement == null) return;
             Vector2 movementInput = context.canceled ? Vector2.zero : context.ReadValue<Vector2>();
             player.Movement.Move(movementInput);
         }
 
         public void OnAim(InputAction.CallbackContext context)
         {
-            if (inputInterrupted || !player || !player.WeaponsSystem) return;
+            if (inputInterrupted || !player || player.WeaponsSystem == null) return;
             if (context.canceled) 
                 player.WeaponsSystem.StopAim();
             else
@@ -34,7 +34,7 @@ namespace RogueLikeEngine.Input
 
         public void OnFire(InputAction.CallbackContext context)
         {
-            if (inputInterrupted || !player || !player.WeaponsSystem) return;
+            if (inputInterrupted || !player || player.WeaponsSystem == null) return;
             if (context.performed && !firing)
             {
                 firing = true;
@@ -54,8 +54,8 @@ namespace RogueLikeEngine.Input
         {
             firing = false;
             if (!player) return;
-            if (player.Movement) player.Movement.Move(Vector2.zero);
-            if (player.WeaponsSystem)
+            if (player.Movement != null) player.Movement.Move(Vector2.zero);
+            if (player.WeaponsSystem != null)
             {
                 player.WeaponsSystem.CancelInput();
                 player.WeaponsSystem.StopAim();

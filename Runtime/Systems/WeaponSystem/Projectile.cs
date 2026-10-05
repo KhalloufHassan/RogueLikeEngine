@@ -54,7 +54,7 @@ namespace RogueLikeEngine.Systems.Weapons
         public void OnDisposed()
         {
             ClearEffects(true);
-            if (Movement) Movement.ResetTraveledDistance();
+            Movement?.ResetTraveledDistance();
             Weapon = null;
             transform.position = new Vector2(10000, 10000);
         }

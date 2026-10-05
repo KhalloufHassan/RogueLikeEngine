@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace RogueLikeEngine.Systems.Weapons
 {
-    public class WeaponsSystem : EntitySystem
+    public class WeaponsSystem : EntitySystem, IWeaponsSystem
     {
         [SerializeField] private StatDefinition m_fireRateStatDefinition;
         [SerializeField] private StatDefinition m_rangeStatDefinition;
