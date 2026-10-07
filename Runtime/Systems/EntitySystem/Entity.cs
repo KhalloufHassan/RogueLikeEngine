@@ -139,7 +139,12 @@ namespace RogueLikeEngine.Systems.Entities
             }
         }
 
-        protected virtual void OnCollisionEnter2D(Collision2D other)
+        private void OnCollisionEnter(Collision collision) => HandleHit(HitInfo.From(collision));
+        private void OnCollisionEnter2D(Collision2D collision) => HandleHit(HitInfo.From(collision));
+        private void OnTriggerEnter(Collider other) => HandleHit(HitInfo.From(other, transform.position));
+        private void OnTriggerEnter2D(Collider2D other) => HandleHit(HitInfo.From(other, transform.position));
+
+        protected virtual void HandleHit(HitInfo hit)
         {
             if (m_hitEffects.Count == 0) return;
             using (ListPool<IOnHit>.Get(out List<IOnHit> hits))
@@ -147,7 +152,7 @@ namespace RogueLikeEngine.Systems.Entities
                 hits.AddRange(m_hitEffects);
                 foreach (IOnHit effect in hits)
                 {
-                    if (m_hitEffects.Contains(effect)) effect.OnHit(this, other);
+                    if (m_hitEffects.Contains(effect)) effect.OnHit(this, hit);
                 }
             }
         }

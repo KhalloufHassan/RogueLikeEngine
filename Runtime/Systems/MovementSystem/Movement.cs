@@ -10,19 +10,30 @@ namespace RogueLikeEngine.Systems.Movements
         [SerializeField] private float m_turnSpeed = 500;
         [SerializeField] private float m_baseSpeed = 5;
         [SerializeField] private bool m_rotateToAimDirection;
+        [Tooltip("2D body, found automatically when empty. Use either this or the 3D body")]
         [SerializeField] protected Rigidbody2D m_rigidbody;
+        [Tooltip("3D body, found automatically when empty. Use either this or the 2D body")]
+        [SerializeField] protected Rigidbody m_rigidbody3D;
 
-        public Vector2 MovementDirection { get; protected set; }
+        public Vector3 MovementDirection { get; protected set; }
         public bool IsMoving => MovementDirection.magnitude > 1E-10;
         public float TraveledDistance { get; private set; }
 
-        public Vector2 Position => m_rigidbody.position;
-        public Vector2 Velocity => m_rigidbody.linearVelocity;
+        public Vector3 Position => Body.Position;
+        public Vector3 Velocity => Body.Velocity;
         public float Speed => m_baseSpeed + m_baseSpeed * (m_movementSpeedStat?.FinalFloatValue ?? 0) / 100f;
+
+        /// <summary>The 2D or 3D body this movement drives, custom movements should only move through it.</summary>
+        protected IBody Body { get; private set; }
 
         private bool m_hasExternalVelocity;
         private Stat m_movementSpeedStat;
         
+        protected virtual void Awake()
+        {
+            Body = BodyFactory.Create(m_rigidbody, m_rigidbody3D) ?? BodyFactory.Find(gameObject);
+        }
+
         private void Start()
         {
             if(m_movementSpeedStatDefinition)
@@ -38,16 +49,18 @@ namespace RogueLikeEngine.Systems.Movements
             AdjustRotation();
         }
         
-        public virtual void Move(Vector2 direction) 
+        public virtual void Move(Vector3 direction) 
         {
             SetMovementForce(direction);
         }
 
+        public Vector3 ToWorld(Vector2 planar) => Body.ToWorld(planar);
+
         
-        protected virtual void SetMovementForce(Vector2 force)
+        protected virtual void SetMovementForce(Vector3 force)
         {
             if (!IsSystemActive) return;
-            MovementDirection = force.normalized;
+            MovementDirection = Body.Flatten(force).normalized;
         }
         
         protected virtual void AdjustRotation()
@@ -56,15 +69,14 @@ namespace RogueLikeEngine.Systems.Movements
             {
                 if (Entity.WeaponsSystem.IsAiming || IsMoving)
                 {
-                    Vector2 direction = Entity.WeaponsSystem.IsAiming ? Entity.WeaponsSystem.AimDirection : MovementDirection;
-                    float targetAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg -90f;
-                    float currentAngle = transform.eulerAngles.z;
-                    float newAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle, m_turnSpeed * Time.deltaTime);
-                    transform.rotation = Quaternion.Euler(0, 0, newAngle);
+                    Vector3 direction = Body.Flatten(Entity.WeaponsSystem.IsAiming ? Entity.WeaponsSystem.AimDirection : MovementDirection);
+                    if (direction.sqrMagnitude < 1E-10) return;
+                    Quaternion target = Body.FacingRotation(direction);
+                    transform.rotation = Quaternion.RotateTowards(transform.rotation, target, m_turnSpeed * Time.deltaTime);
                 }
             }
         }
-        
+
         protected virtual void UpdateVelocity()
         {
             if (m_hasExternalVelocity) return;
@@ -72,11 +84,12 @@ namespace RogueLikeEngine.Systems.Movements
         }
 
         /// <summary>Applies externally driven motion, suppressing walking until cleared. Call from the physics loop.</summary>
-        public void SetExternalVelocity(Vector2 velocity, float deltaTime)
+        public void SetExternalVelocity(Vector3 velocity, float deltaTime)
         {
             if (!IsSystemActive || !isActiveAndEnabled) return;
             m_hasExternalVelocity = true;
-            ApplyVelocity(velocity, deltaTime);
+            Body.SetVelocity(velocity);
+            TraveledDistance += velocity.magnitude * deltaTime;
         }
 
         /// <summary>Resets the distance metric, e.g. when a pooled entity is reused.</summary>
@@ -86,28 +99,28 @@ namespace RogueLikeEngine.Systems.Movements
         public void ClearExternalVelocity()
         {
             m_hasExternalVelocity = false;
-            if (m_rigidbody) ApplyVelocity(Vector2.zero, 0);
+            Body?.SetPlanarVelocity(Vector3.zero);
         }
 
         protected override void OnSystemActiveChanged()
         {
             if (!IsSystemActive)
             {
-                MovementDirection = Vector2.zero;
+                MovementDirection = Vector3.zero;
                 ClearExternalVelocity();
             }
         }
 
         protected virtual void OnDisable()
         {
-            MovementDirection = Vector2.zero;
+            MovementDirection = Vector3.zero;
             ClearExternalVelocity();
         }
 
-        /// <summary>Applies movement while retaining the system's distance metric.</summary>
-        protected void ApplyVelocity(Vector2 velocity, float deltaTime)
+        /// <summary>Walks on the movement plane while retaining the system's distance metric.</summary>
+        protected void ApplyVelocity(Vector3 velocity, float deltaTime)
         {
-            m_rigidbody.linearVelocity = velocity;
+            Body.SetPlanarVelocity(velocity);
             TraveledDistance += velocity.magnitude * deltaTime;
         }
     }

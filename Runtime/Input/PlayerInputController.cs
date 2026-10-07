@@ -20,7 +20,7 @@ namespace RogueLikeEngine.Input
         {
             if (inputInterrupted || !player || player.Movement == null) return;
             Vector2 movementInput = context.canceled ? Vector2.zero : context.ReadValue<Vector2>();
-            player.Movement.Move(movementInput);
+            player.Movement.Move(ToWorld(movementInput));
         }
 
         public void OnAim(InputAction.CallbackContext context)
@@ -29,7 +29,7 @@ namespace RogueLikeEngine.Input
             if (context.canceled) 
                 player.WeaponsSystem.StopAim();
             else
-                player.WeaponsSystem.Aim(context.ReadValue<Vector2>());
+                player.WeaponsSystem.Aim(ToWorld(context.ReadValue<Vector2>()));
         }
 
         public void OnFire(InputAction.CallbackContext context)
@@ -50,7 +50,9 @@ namespace RogueLikeEngine.Input
             }
         }
 
-        public void CancelInput()
+        private Vector3 ToWorld(Vector2 input) => player.Movement?.ToWorld(input) ?? input;
+
+        private void CancelInput()
         {
             firing = false;
             if (!player) return;

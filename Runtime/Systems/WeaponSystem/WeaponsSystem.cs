@@ -13,7 +13,7 @@ namespace RogueLikeEngine.Systems.Weapons
 
         public virtual WeaponInstance CurrentWeapon => m_gunPoint.CurrentWeapon;
         public virtual bool CanFire => IsSystemActive && m_gunPoint && m_gunPoint.CanFire;
-        public Vector2 AimDirection { get; protected set; }
+        public Vector3 AimDirection { get; protected set; }
         public bool IsAiming => AimDirection.magnitude > 1E-10;
 
         public virtual void Fire()
@@ -30,7 +30,7 @@ namespace RogueLikeEngine.Systems.Weapons
         /// <summary>Aborts held input without treating interruption as a release.</summary>
         public virtual void CancelInput() { }
         
-        public virtual void Aim(Vector2 direction)
+        public virtual void Aim(Vector3 direction)
         {
             AimDirection = direction.normalized;
         }

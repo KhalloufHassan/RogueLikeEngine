@@ -6,14 +6,13 @@ using UnityEngine;
 
 namespace RogueLikeEngine.Systems.Weapons
 {
-    [RequireComponent(typeof(Rigidbody2D))]
     public class Projectile : MonoBehaviour,IPoolObject
     {
         public WeaponInstance Weapon { get; set; }
         public Damage Damage { get; set; }
         public float Range { get; set; }
         public float Speed { get; set; }
-        public Vector2 Direction { get; private set; }
+        public Vector3 Direction { get; private set; }
         public float TraveledDistance { get; private set; }
 
         public Entity Owner { get; set; }
@@ -21,27 +20,34 @@ namespace RogueLikeEngine.Systems.Weapons
         /// <summary>Optional Entity on the same object, hosting the projectile's effects.</summary>
         public Entity Entity { get; private set; }
 
-        private Rigidbody2D m_rigidbody;
+        private Rigidbody2D m_rigidbody2D;
+        private Rigidbody m_rigidbody3D;
 
         private void Awake()
         {
-            m_rigidbody = GetComponent<Rigidbody2D>();
+            m_rigidbody2D = GetComponent<Rigidbody2D>();
+            m_rigidbody3D = GetComponent<Rigidbody>();
             Entity = GetComponent<Entity>();
         }
 
-        public void SetDirection(Vector2 direction) => Direction = direction.normalized;
+        public void SetDirection(Vector3 direction) => Direction = direction.normalized;
 
         private void FixedUpdate()
         {
-            m_rigidbody.linearVelocity = Direction * Speed;
+            SetVelocity(Direction * Speed);
             TraveledDistance += Speed * Time.fixedDeltaTime;
             if (TraveledDistance >= Range) Finish();
         }
 
-        private void OnCollisionEnter2D(Collision2D other)
+        private void OnCollisionEnter(Collision collision) => HandleHit(HitInfo.From(collision));
+        private void OnCollisionEnter2D(Collision2D collision) => HandleHit(HitInfo.From(collision));
+        private void OnTriggerEnter(Collider other) => HandleHit(HitInfo.From(other, transform.position));
+        private void OnTriggerEnter2D(Collider2D other) => HandleHit(HitInfo.From(other, transform.position));
+
+        private void HandleHit(HitInfo hit)
         {
             if (IsDisposed || !enabled) return;
-            Entity target = other.gameObject.GetComponentInParent<Entity>();
+            Entity target = hit.Other.GetComponentInParent<Entity>();
             IHealth health = target && target != Owner ? target.Health : null;
             if (health != null)
             {
@@ -59,13 +65,19 @@ namespace RogueLikeEngine.Systems.Weapons
         {
             StartCoroutine(DespawnNextFrame());
             enabled = false;
-            m_rigidbody.linearVelocity = Vector2.zero;
+            SetVelocity(Vector3.zero);
         }
 
         private IEnumerator DespawnNextFrame()
         {
             yield return null;
             Despawn();
+        }
+
+        private void SetVelocity(Vector3 velocity)
+        {
+            if (m_rigidbody3D) m_rigidbody3D.linearVelocity = velocity;
+            else if (m_rigidbody2D) m_rigidbody2D.linearVelocity = velocity;
         }
 
         /// <summary>Pooled projectiles go back to their pool, others are destroyed.</summary>
@@ -92,10 +104,10 @@ namespace RogueLikeEngine.Systems.Weapons
         {
             if (Entity) Entity.ClearEffects(true);
             TraveledDistance = 0;
-            Direction = Vector2.zero;
+            Direction = Vector3.zero;
             Weapon = null;
             Owner = null;
-            transform.position = new Vector2(10000, 10000);
+            transform.position = new Vector3(10000, 10000, 10000);
         }
 
         #endregion

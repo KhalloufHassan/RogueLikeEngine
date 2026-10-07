@@ -1,6 +1,5 @@
 using RogueLikeEngine.Systems.Entities;
 using RogueLikeEngine.Systems.Entities.Effects;
-using UnityEngine;
 
 namespace RogueLikeEngine.Tests.PlayMode
 {
@@ -8,7 +7,12 @@ namespace RogueLikeEngine.Tests.PlayMode
     public class HitCountingEffect : EffectScriptableObject, IOnHit
     {
         public int hits;
+        public HitInfo lastHit;
 
-        public void OnHit(Entity entity, Collision2D collision) => hits++;
+        public void OnHit(Entity entity, HitInfo hit)
+        {
+            hits++;
+            lastHit = hit;
+        }
     }
 }

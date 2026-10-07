@@ -5,15 +5,18 @@ namespace RogueLikeEngine.Systems.Movements
 {
     public interface IMovement : IEntitySystem
     {
-        Vector2 MovementDirection { get; }
+        Vector3 MovementDirection { get; }
         bool IsMoving { get; }
         float TraveledDistance { get; }
-        Vector2 Position { get; }
-        Vector2 Velocity { get; }
+        Vector3 Position { get; }
+        Vector3 Velocity { get; }
         float Speed { get; }
 
-        void Move(Vector2 direction);
-        void SetExternalVelocity(Vector2 velocity, float deltaTime);
+        /// <summary>Planar input (stick, keys) to a world direction this movement can use.</summary>
+        Vector3 ToWorld(Vector2 planar);
+
+        void Move(Vector3 direction);
+        void SetExternalVelocity(Vector3 velocity, float deltaTime);
         void ClearExternalVelocity();
         void ResetTraveledDistance();
     }

@@ -7,14 +7,14 @@ namespace RogueLikeEngine.Systems.Weapons
     {
         WeaponInstance CurrentWeapon { get; }
         bool CanFire { get; }
-        Vector2 AimDirection { get; }
+        Vector3 AimDirection { get; }
         bool IsAiming { get; }
 
         void Fire();
         void BeginFire();
         void EndFire();
         void CancelInput();
-        void Aim(Vector2 direction);
+        void Aim(Vector3 direction);
         void StopAim();
 
         int CalculatedProjectileDamage(WeaponData weaponData);

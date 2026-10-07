@@ -4,6 +4,7 @@
     "references": [
         "GUID:de40235f0820ef943ba4a38c8bd6ae39",
         "Unity.TextMeshPro",
+        "Unity.InputSystem",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

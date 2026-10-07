@@ -15,6 +15,7 @@ public class FloatingDamageUI : MonoBehaviour,IPoolObject
 
     private Vector3 m_baseScale;
     private Vector3 m_startPosition;
+    private Vector3 m_floatDirection = Vector3.up;
     private float m_elapsed;
     private bool m_isAnimating;
 
@@ -23,11 +24,15 @@ public class FloatingDamageUI : MonoBehaviour,IPoolObject
         m_baseScale = transform.localScale;
     }
 
-    public void Show(Damage damage,Vector2 position)
+    public void Show(Damage damage,Vector3 position)
     {
-        Vector2 offset = new(Random.Range(-randomOffsetValue, randomOffsetValue), 0);
+        Camera viewer = Camera.main;
+        Vector3 right = viewer ? viewer.transform.right : Vector3.right;
+        m_floatDirection = viewer ? viewer.transform.up : Vector3.up;
+        if (viewer) transform.rotation = viewer.transform.rotation;
+
         text.text = damage.Value.ToString();
-        transform.position = position + offset;
+        transform.position = position + right * Random.Range(-randomOffsetValue, randomOffsetValue);
 
         Animate();
     }
@@ -52,7 +57,7 @@ public class FloatingDamageUI : MonoBehaviour,IPoolObject
 
         // Move upward (ease out cubic)
         float moveT = 1f - Mathf.Pow(1f - t, 3f);
-        transform.position = m_startPosition + Vector3.up * (floatingDistance * moveT);
+        transform.position = m_startPosition + m_floatDirection * (floatingDistance * moveT);
 
         // Fade out (ease in cubic)
         Color c = text.color;
