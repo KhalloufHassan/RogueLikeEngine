@@ -12,7 +12,7 @@ namespace RogueLikeEngine.Systems.Weapons
         [SerializeField] private float m_distanceFromOwner = 0.75f;
 
         public WeaponInstance CurrentWeapon { get; private set; }
-        public bool CanFire => !IsOnCooldown;
+        public bool CanFire => CurrentWeapon != null && !IsOnCooldown;
         public bool IsOnCooldown => !m_coolDownTimer.IsFinished;
 
         private AutoTimer m_coolDownTimer;
@@ -24,7 +24,7 @@ namespace RogueLikeEngine.Systems.Weapons
 
         private void Awake()
         {
-            CurrentWeapon = weaponData.CreateWeaponInstance();
+            CurrentWeapon = weaponData ? weaponData.CreateWeaponInstance() : null;
             m_startScale = transform.localScale;
         }
 
@@ -69,8 +69,7 @@ namespace RogueLikeEngine.Systems.Weapons
         public void Fire()
         {
             Projectile projectile = CurrentWeapon.CreateProjectile(weaponsSystem);
-            projectile.transform.position = shootingTransform.position;
-            projectile.SetDirection(m_is3D ? shootingTransform.forward : shootingTransform.right);
+            projectile.Launch(shootingTransform.position, m_is3D ? shootingTransform.forward : shootingTransform.right);
 
             m_coolDownTimer = 1f / weaponsSystem.CalculatedFireRate(CurrentWeapon.WeaponData);
             m_coolDownTimer.Reset();

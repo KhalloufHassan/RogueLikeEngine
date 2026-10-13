@@ -1,3 +1,4 @@
+using System;
 using RogueLikeEngine.Systems.Entities;
 using UnityEngine;
 
@@ -9,6 +10,9 @@ namespace RogueLikeEngine.Systems.Weapons
         bool CanFire { get; }
         Vector3 AimDirection { get; }
         bool IsAiming { get; }
+
+        /// <summary>Raised after every successful shot.</summary>
+        event Action OnFire;
 
         void Fire();
         void BeginFire();

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using RogueLikeEngine.Optimization.Pooling;
 using RogueLikeEngine.Systems.Entities;
@@ -20,6 +21,9 @@ namespace RogueLikeEngine.Systems.Weapons
         /// <summary>Optional Entity on the same object, hosting the projectile's effects.</summary>
         public Entity Entity { get; private set; }
 
+        public event Action OnLaunched;
+        public event Action<HitInfo> OnHit;
+
         private Rigidbody2D m_rigidbody2D;
         private Rigidbody m_rigidbody3D;
 
@@ -31,6 +35,13 @@ namespace RogueLikeEngine.Systems.Weapons
         }
 
         public void SetDirection(Vector3 direction) => Direction = direction.normalized;
+
+        public void Launch(Vector3 position, Vector3 direction)
+        {
+            transform.position = position;
+            SetDirection(direction);
+            OnLaunched?.Invoke();
+        }
 
         private void FixedUpdate()
         {
@@ -51,9 +62,10 @@ namespace RogueLikeEngine.Systems.Weapons
             IHealth health = target && target != Owner ? target.Health : null;
             if (health != null)
             {
-                health.TakeDamage(Damage);
+                health.TakeDamage(new Damage(Damage.Value, Direction));
                 if (Weapon != null) Weapon.DamageDealt += Damage.Value;
             }
+            OnHit?.Invoke(hit);
             Finish();
         }
 

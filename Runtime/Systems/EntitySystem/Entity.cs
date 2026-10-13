@@ -26,6 +26,7 @@ namespace RogueLikeEngine.Systems.Entities
         public IHealth Health => m_health ? m_health : null;
 
         public event Action<IEffect> OnEffectAdded;
+        public event Action<IEffect> OnEffectRemoved;
 
         private IDictionary<int, IEffect> Effects { get; set; } = new Dictionary<int, IEffect>();
         private readonly List<IOnUpdate> m_updateEffects = new();
@@ -35,7 +36,7 @@ namespace RogueLikeEngine.Systems.Entities
         /// <summary>True once the starting effects have been applied at least once (e.g. after Start).</summary>
         private bool StartingEffectsApplied { get; set; }
 
-        private void Start()
+        protected virtual void Start()
         {
             if (!StartingEffectsApplied) ApplyStartingEffect();
         }
@@ -88,6 +89,7 @@ namespace RogueLikeEngine.Systems.Entities
             UnregisterHooks(internalCopy);
             if (triggerDurationEnded && internalCopy is IOnDurationEnded onDurationEnded)
                 onDurationEnded.OnDurationEnded(this);
+            OnEffectRemoved?.Invoke(internalCopy);
             DestroyCopy(internalCopy);
         }
 

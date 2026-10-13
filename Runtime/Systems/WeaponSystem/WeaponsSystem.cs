@@ -1,3 +1,4 @@
+using System;
 using RogueLikeEngine.Systems.Entities;
 using RogueLikeEngine.Systems.Stats;
 using UnityEngine;
@@ -16,9 +17,13 @@ namespace RogueLikeEngine.Systems.Weapons
         public Vector3 AimDirection { get; protected set; }
         public bool IsAiming => AimDirection.magnitude > 1E-10;
 
+        public event Action OnFire;
+
         public virtual void Fire()
         {
-            if(CanFire) m_gunPoint.Fire();
+            if (!CanFire) return;
+            m_gunPoint.Fire();
+            OnFire?.Invoke();
         }
 
         /// <summary>Called once when the fire action begins, before repeated Fire calls.</summary>

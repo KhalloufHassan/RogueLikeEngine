@@ -211,5 +211,36 @@ namespace RogueLikeEngine.Tests
 
             Assert.AreEqual(0, m_health.CurrentHealth);
         }
+
+        [Test]
+        public void Invulnerable_IgnoresDamage()
+        {
+            Awake();
+            m_health.Invulnerable = true;
+
+            m_health.TakeDamage(new Damage(50));
+
+            Assert.AreEqual(BaseMaxHealth, m_health.CurrentHealth);
+        }
+
+        [Test]
+        public void LockedSystem_IgnoresDamageUntilEveryOwnerUnlocks()
+        {
+            Awake();
+            object stun = new();
+            object ability = new();
+            m_health.Lock(stun);
+            m_health.Lock(ability);
+
+            m_health.Unlock(stun);
+            m_health.TakeDamage(new Damage(10));
+            Assert.IsFalse(m_health.IsSystemActive);
+            Assert.AreEqual(BaseMaxHealth, m_health.CurrentHealth);
+
+            m_health.Unlock(ability);
+            m_health.TakeDamage(new Damage(10));
+            Assert.IsTrue(m_health.IsSystemActive);
+            Assert.AreEqual(90, m_health.CurrentHealth);
+        }
     }
 }

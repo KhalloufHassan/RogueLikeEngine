@@ -10,6 +10,9 @@ namespace RogueLikeEngine.Systems.Healths
         int MaxHealth { get; }
         bool IsDead { get; }
 
+        /// <summary>While true, all damage is ignored.</summary>
+        bool Invulnerable { get; set; }
+
         event Action OnHealthChanged;
         event Action<Damage> OnDamaged;
         event Action<int> OnHealed;

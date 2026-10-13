@@ -1,4 +1,5 @@
 ﻿using System;
+using UnityEngine;
 
 namespace RogueLikeEngine.Systems.Weapons
 {
@@ -6,10 +7,12 @@ namespace RogueLikeEngine.Systems.Weapons
     public struct Damage
     {
         public int Value;
+        public Vector3 Direction;
 
-        public Damage(int value)
+        public Damage(int value, Vector3 direction = default)
         {
             Value = value;
+            Direction = direction;
         }
     }
 }

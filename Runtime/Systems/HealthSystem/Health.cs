@@ -21,6 +21,7 @@ namespace RogueLikeEngine.Systems.Healths
         public int MaxHealth => m_maxHealth + (m_maxHealthStat?.FinalValue ?? 0);
 
         public bool IsDead { get; private set; }
+        public bool Invulnerable { get; set; }
 
         /// <summary>Raised whenever CurrentHealth or MaxHealth changes.</summary>
         public event Action OnHealthChanged;
@@ -51,7 +52,7 @@ namespace RogueLikeEngine.Systems.Healths
 
         public void TakeDamage(Damage damage)
         {
-            if (IsDead || !IsSystemActive) return;
+            if (IsDead || Invulnerable || !IsSystemActive) return;
 
             CurrentHealth = Mathf.Max(0, CurrentHealth - Mathf.Max(0, damage.Value));
             if (m_pool) m_pool.Request().Show(damage, transform.position);

@@ -1,5 +1,6 @@
 ﻿using RogueLikeEngine.Systems.Entities;
 using RogueLikeEngine.Systems.Stats;
+using RogueLikeEngine.Systems.Weapons;
 using UnityEngine;
 
 namespace RogueLikeEngine.Systems.Movements
@@ -9,6 +10,7 @@ namespace RogueLikeEngine.Systems.Movements
         [SerializeField] private StatDefinition m_movementSpeedStatDefinition;
         [SerializeField] private float m_turnSpeed = 500;
         [SerializeField] private float m_baseSpeed = 5;
+        [Tooltip("Faces the aim direction while aiming, otherwise the movement direction")]
         [SerializeField] private bool m_rotateToAimDirection;
         [Tooltip("2D body, found automatically when empty. Use either this or the 3D body")]
         [SerializeField] protected Rigidbody2D m_rigidbody;
@@ -34,17 +36,16 @@ namespace RogueLikeEngine.Systems.Movements
             Body = BodyFactory.Create(m_rigidbody, m_rigidbody3D) ?? BodyFactory.Find(gameObject);
         }
 
-        private void Start()
+        protected virtual void Start()
         {
             if(m_movementSpeedStatDefinition)
                 m_movementSpeedStat = Entity.StatsStore.GetOrCreateStat(m_movementSpeedStatDefinition);
-            m_rotateToAimDirection = m_rotateToAimDirection && Entity.WeaponsSystem != null;
         }
 
+        /// <summary>An inactive movement stops driving the body, leaving it to physics (e.g. knockbacks while stunned).</summary>
         protected virtual void Update()
         {
-            if(!IsSystemActive) 
-                MovementDirection = Vector3.zero;
+            if (!IsSystemActive) return;
             UpdateVelocity();
             AdjustRotation();
         }
@@ -65,16 +66,15 @@ namespace RogueLikeEngine.Systems.Movements
         
         protected virtual void AdjustRotation()
         {
-            if (m_rotateToAimDirection)
-            {
-                if (Entity.WeaponsSystem.IsAiming || IsMoving)
-                {
-                    Vector3 direction = Body.Flatten(Entity.WeaponsSystem.IsAiming ? Entity.WeaponsSystem.AimDirection : MovementDirection);
-                    if (direction.sqrMagnitude < 1E-10) return;
-                    Quaternion target = Body.FacingRotation(direction);
-                    transform.rotation = Quaternion.RotateTowards(transform.rotation, target, m_turnSpeed * Time.deltaTime);
-                }
-            }
+            if (!m_rotateToAimDirection) return;
+            IWeaponsSystem weaponsSystem = Entity.WeaponsSystem;
+            bool isAiming = weaponsSystem is { IsAiming: true };
+            if (!isAiming && !IsMoving) return;
+
+            Vector3 direction = Body.Flatten(isAiming ? weaponsSystem.AimDirection : MovementDirection);
+            if (direction.sqrMagnitude < 1E-10) return;
+            Quaternion target = Body.FacingRotation(direction);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, target, m_turnSpeed * Time.deltaTime);
         }
 
         protected virtual void UpdateVelocity()

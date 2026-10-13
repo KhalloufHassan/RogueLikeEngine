@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 namespace RogueLikeEngine.Systems.Entities
 {
@@ -10,7 +11,7 @@ namespace RogueLikeEngine.Systems.Entities
 
         public bool IsSystemActive
         {
-            get => m_isSystemActive;
+            get => m_isSystemActive && m_locks.Count == 0;
             set
             {
                 m_isSystemActive = value;
@@ -19,7 +20,18 @@ namespace RogueLikeEngine.Systems.Entities
         }
 
         private bool m_isSystemActive = true;
-    
+        private readonly HashSet<object> m_locks = new();
+
+        public void Lock(object owner)
+        {
+            if (m_locks.Add(owner)) OnSystemActiveChanged();
+        }
+
+        public void Unlock(object owner)
+        {
+            if (m_locks.Remove(owner)) OnSystemActiveChanged();
+        }
+
         protected virtual void OnSystemActiveChanged() {}
     }
 }
