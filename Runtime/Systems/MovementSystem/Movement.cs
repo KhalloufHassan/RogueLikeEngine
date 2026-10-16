@@ -47,6 +47,11 @@ namespace RogueLikeEngine.Systems.Movements
         {
             if (!IsSystemActive) return;
             UpdateVelocity();
+        }
+
+        protected virtual void FixedUpdate()
+        {
+            if (!IsSystemActive) return;
             AdjustRotation();
         }
         
@@ -73,8 +78,7 @@ namespace RogueLikeEngine.Systems.Movements
 
             Vector3 direction = Body.Flatten(isAiming ? weaponsSystem.AimDirection : MovementDirection);
             if (direction.sqrMagnitude < 1E-10) return;
-            Quaternion target = Body.FacingRotation(direction);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, target, m_turnSpeed * Time.deltaTime);
+            Body.RotateTowards(direction, m_turnSpeed * Time.fixedDeltaTime);
         }
 
         protected virtual void UpdateVelocity()

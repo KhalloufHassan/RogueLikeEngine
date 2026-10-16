@@ -26,6 +26,9 @@ namespace RogueLikeEngine.Systems.Movements
         public Vector3 Flatten(Vector3 direction) => new(direction.x, 0, direction.z);
         public Vector3 ToWorld(Vector2 planar) => new(planar.x, 0, planar.y);
 
+        public void RotateTowards(Vector3 direction, float maxDegreesDelta) =>
+            m_rigidbody.MoveRotation(Quaternion.RotateTowards(m_rigidbody.rotation, FacingRotation(direction), maxDegreesDelta));
+
         public Quaternion FacingRotation(Vector3 direction) => Quaternion.LookRotation(Flatten(direction), Vector3.up);
     }
 }

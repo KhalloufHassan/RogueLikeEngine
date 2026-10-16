@@ -25,5 +25,8 @@ namespace RogueLikeEngine.Systems.Movements
 
         /// <summary>Rotation for a character facing the direction: 2D sprites face up, 3D models face forward.</summary>
         Quaternion FacingRotation(Vector3 direction);
+
+        /// <summary>Turns toward a nonzero planar direction by at most maxDegreesDelta degrees. Call from the physics loop.</summary>
+        void RotateTowards(Vector3 direction, float maxDegreesDelta);
     }
 }
