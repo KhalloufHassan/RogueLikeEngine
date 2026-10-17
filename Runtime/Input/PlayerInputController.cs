@@ -1,4 +1,5 @@
 using RogueLikeEngine.Systems.Entities;
+using RogueLikeEngine.Systems.Movements;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -21,6 +22,16 @@ namespace RogueLikeEngine.Input
             if (inputInterrupted || !player || player.Movement == null) return;
             Vector2 movementInput = context.canceled ? Vector2.zero : context.ReadValue<Vector2>();
             player.Movement.Move(ToWorld(movementInput));
+        }
+
+        public void OnCover(InputAction.CallbackContext context)
+        {
+            if (!context.performed || inputInterrupted || !isActiveAndEnabled || !player || player.Movement == null) return;
+            IMovement movement = player.Movement;
+            if (movement.IsInCover)
+                movement.LeaveCover();
+            else
+                movement.TakeCover();
         }
 
         public void OnAim(InputAction.CallbackContext context)
