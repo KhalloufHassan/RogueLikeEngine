@@ -16,6 +16,7 @@ namespace RogueLikeEngine.Systems.Movements
         [SerializeField] private float m_coverSpeedMultiplier = .5f;
         [SerializeField] private float m_transitionSpeedMultiplier = .3f;
         [SerializeField] private float m_transitionDuration = .5f;
+        [SerializeField, Min(0)] private float m_exitDuration = .3f;
         [Tooltip("Lateral reach used to check an upper-body peek without moving the body")]
         [SerializeField, Min(0)] private float m_exposureDistance = .55f;
 
@@ -69,7 +70,7 @@ namespace RogueLikeEngine.Systems.Movements
         {
             if (!IsSystemActive || !isActiveAndEnabled || !IsInCover || !CanStand()) return;
             m_coverState = CoverState.Leaving;
-            m_transitionTimeLeft = m_transitionDuration;
+            m_transitionTimeLeft = m_exitDuration;
             RestoreMovement();
         }
 

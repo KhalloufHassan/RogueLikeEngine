@@ -323,7 +323,7 @@ namespace RogueLikeEngine.Tests.PlayMode
             Assert.That(m_capsule.height, Is.EqualTo(1.8f).Within(.001f));
             yield return null;
             Assert.That(m_body.linearVelocity.x, Is.EqualTo(movement.Speed * .3f).Within(.05f));
-            yield return new WaitForSeconds(.55f);
+            yield return new WaitForSeconds(.35f);
             Assert.AreEqual(CoverState.None, m_movement.State);
             yield return null;
             Assert.That(m_body.linearVelocity.x, Is.EqualTo(movement.Speed).Within(.05f));
