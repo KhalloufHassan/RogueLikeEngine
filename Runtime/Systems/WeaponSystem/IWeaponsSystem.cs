@@ -10,6 +10,8 @@ namespace RogueLikeEngine.Systems.Weapons
         bool CanFire { get; }
         Vector3 AimDirection { get; }
         bool IsAiming { get; }
+        /// <summary>Whether firing is requested, independently of cooldown or animation.</summary>
+        bool IsFireHeld { get; }
 
         /// <summary>Raised after every successful shot.</summary>
         event Action OnFire;

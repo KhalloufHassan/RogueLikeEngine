@@ -20,6 +20,7 @@ namespace RogueLikeEngine.Systems.Movements
         public Vector3 MovementDirection { get; protected set; }
         public bool IsMoving => MovementDirection.magnitude > 1E-10;
         public virtual bool IsInCover => false;
+        public virtual bool IsExposed => false;
         public float TraveledDistance { get; private set; }
 
         public Vector3 Position => Body.Position;
@@ -64,6 +65,8 @@ namespace RogueLikeEngine.Systems.Movements
         public virtual void TakeCover() => throw new System.NotImplementedException();
 
         public virtual void LeaveCover() => throw new System.NotImplementedException();
+
+        public virtual void SetCoverExposure(bool exposed, Vector3 aimDirection) => throw new System.NotImplementedException();
 
         public Vector3 ToWorld(Vector2 planar) => Body.ToWorld(planar);
 

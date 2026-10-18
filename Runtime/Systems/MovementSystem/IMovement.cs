@@ -8,6 +8,7 @@ namespace RogueLikeEngine.Systems.Movements
         Vector3 MovementDirection { get; }
         bool IsMoving { get; }
         bool IsInCover { get; }
+        bool IsExposed { get; }
         float TraveledDistance { get; }
         Vector3 Position { get; }
         Vector3 Velocity { get; }
@@ -19,6 +20,7 @@ namespace RogueLikeEngine.Systems.Movements
         void Move(Vector3 direction);
         void TakeCover();
         void LeaveCover();
+        void SetCoverExposure(bool exposed, Vector3 aimDirection);
         void SetExternalVelocity(Vector3 velocity, float deltaTime);
         void ClearExternalVelocity();
         void ResetTraveledDistance();

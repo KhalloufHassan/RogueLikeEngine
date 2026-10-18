@@ -5,6 +5,7 @@ using NUnit.Framework;
 using RogueLikeEngine.Input;
 using RogueLikeEngine.Systems.Entities;
 using RogueLikeEngine.Systems.Movements;
+using RogueLikeEngine.Systems.Weapons;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
@@ -70,8 +71,219 @@ namespace RogueLikeEngine.Tests.PlayMode
         {
             IMovement movement = m_character.AddComponent<Movement>();
             Assert.IsFalse(movement.IsInCover);
+            Assert.IsFalse(movement.IsExposed);
             Assert.Throws<NotImplementedException>(() => movement.TakeCover());
             Assert.Throws<NotImplementedException>(() => movement.LeaveCover());
+            Assert.Throws<NotImplementedException>(() => movement.SetCoverExposure(true, Vector3.forward));
+        }
+
+        [UnityTest]
+        public IEnumerator SharedWeaponFireExposesAndHidesWithoutAnAnimator()
+        {
+            WeaponsSystem weapons = AddWeapons();
+            yield return null;
+            weapons.Aim(Vector3.forward);
+            weapons.BeginFire();
+            m_movement.TakeCover();
+            yield return new WaitForFixedUpdate();
+            Assert.IsFalse(m_movement.IsExposed);
+            yield return new WaitForSeconds(.55f);
+            yield return new WaitForFixedUpdate();
+            Assert.IsTrue(m_movement.IsExposed);
+            Assert.That(m_capsule.height, Is.EqualTo(1.8f).Within(.001f));
+            weapons.EndFire();
+            yield return new WaitForFixedUpdate();
+            Assert.IsFalse(m_movement.IsExposed);
+            Assert.That(m_capsule.height, Is.EqualTo(1).Within(.001f));
+
+            weapons.BeginFire();
+            yield return new WaitForFixedUpdate();
+            Assert.IsTrue(m_movement.IsExposed);
+            weapons.CancelInput();
+            yield return new WaitForFixedUpdate();
+            Assert.IsFalse(m_movement.IsExposed);
+            weapons.BeginFire();
+            yield return new WaitForFixedUpdate();
+            Assert.IsTrue(m_movement.IsExposed);
+            weapons.Lock(this);
+            yield return new WaitForFixedUpdate();
+            Assert.IsFalse(m_movement.IsExposed);
+            weapons.Unlock(this);
+            weapons.BeginFire();
+            yield return new WaitForFixedUpdate();
+            Assert.IsTrue(m_movement.IsExposed);
+            weapons.enabled = false;
+            weapons.BeginFire();
+            yield return new WaitForFixedUpdate();
+            Assert.IsFalse(weapons.IsFireHeld);
+            Assert.IsFalse(m_movement.IsExposed);
+            weapons.enabled = true;
+            yield return new WaitForFixedUpdate();
+            Assert.IsFalse(weapons.IsFireHeld);
+            Assert.IsFalse(m_movement.IsExposed);
+        }
+
+        [UnityTest]
+        public IEnumerator SharedWeaponFireStillRequiresAClearHighCoverEdge()
+        {
+            WeaponsSystem weapons = AddWeapons();
+            SetField(typeof(Cover), m_cover, "m_type", CoverType.High);
+            yield return null;
+            weapons.Aim(Vector3.forward);
+            weapons.BeginFire();
+            m_movement.TakeCover();
+            yield return new WaitForSeconds(.55f);
+            yield return new WaitForFixedUpdate();
+            Assert.IsFalse(m_movement.IsExposed);
+            m_movement.LeaveCover();
+            m_body.position = Origin + Vector3.right * 4.65f;
+            Physics.SyncTransforms();
+            m_movement.TakeCover();
+            yield return new WaitForSeconds(.55f);
+            yield return new WaitForFixedUpdate();
+            Assert.IsTrue(m_movement.IsExposed);
+            weapons.EndFire();
+            yield return new WaitForFixedUpdate();
+            Assert.IsFalse(m_movement.IsExposed);
+        }
+
+        [UnityTest]
+        public IEnumerator LowCoverExposureRestoresStandingColliderAndHidesOnRelease()
+        {
+            AddWeapons();
+            yield return null;
+            IMovement movement = m_entity.Movement;
+            movement.TakeCover();
+            movement.SetCoverExposure(true, Vector3.forward);
+            yield return new WaitForFixedUpdate();
+            Assert.IsFalse(movement.IsExposed);
+            yield return new WaitForSeconds(.55f);
+            yield return new WaitForFixedUpdate();
+            Assert.IsTrue(movement.IsExposed);
+            Assert.IsTrue(movement.IsInCover);
+            Assert.That(m_capsule.height, Is.EqualTo(1.8f).Within(.001f));
+            Assert.That(m_capsule.center.y, Is.EqualTo(.9f).Within(.001f));
+
+            movement.Move(Vector3.right);
+            yield return new WaitForFixedUpdate();
+            Assert.That(m_body.linearVelocity.x, Is.EqualTo(movement.Speed * .5f).Within(.05f));
+            movement.SetCoverExposure(false, Vector3.zero);
+            Assert.IsFalse(movement.IsExposed);
+            Assert.That(m_capsule.height, Is.EqualTo(1).Within(.001f));
+            Assert.AreEqual(CoverState.Holding, m_movement.State);
+        }
+
+        [UnityTest]
+        public IEnumerator LowCoverExposureRequiresClearanceAndClearsOnLock()
+        {
+            yield return null;
+            m_movement.TakeCover();
+            yield return new WaitForSeconds(.55f);
+            m_ceiling = new GameObject("Exposure obstruction test");
+            m_ceiling.transform.position = m_body.position + Vector3.up * 1.5f;
+            m_ceiling.AddComponent<BoxCollider>().size = new Vector3(1, .2f, 1);
+            Physics.SyncTransforms();
+
+            m_movement.SetCoverExposure(true, Vector3.forward);
+            yield return new WaitForFixedUpdate();
+            Assert.IsFalse(m_movement.IsExposed);
+            Assert.That(m_capsule.height, Is.EqualTo(1).Within(.001f));
+            m_ceiling.SetActive(false);
+            Physics.SyncTransforms();
+            yield return new WaitForFixedUpdate();
+            Assert.IsTrue(m_movement.IsExposed);
+
+            m_movement.Lock(this);
+            Assert.IsFalse(m_movement.IsExposed);
+            Assert.IsFalse(m_movement.IsInCover);
+            m_movement.Unlock(this);
+            m_movement.TakeCover();
+            yield return new WaitForSeconds(.55f);
+            Assert.IsFalse(m_movement.IsExposed);
+        }
+
+        [UnityTest]
+        public IEnumerator HighCoverCannotExposeFromTheMiddle()
+        {
+            SetField(typeof(Cover), m_cover, "m_type", CoverType.High);
+            yield return null;
+            m_movement.TakeCover();
+            yield return new WaitForSeconds(.55f);
+            Vector3 coveredPosition = m_body.position;
+            m_movement.SetCoverExposure(true, Vector3.forward);
+            yield return new WaitForSeconds(.4f);
+            Assert.IsFalse(m_movement.IsExposed);
+            Assert.That(Vector3.Distance(m_body.position, coveredPosition), Is.LessThan(.02f));
+        }
+
+        [UnityTest]
+        public IEnumerator HighCoverKeepsBodyCoveredAtLeftEdge() => CheckHighCoverExposure(-1);
+
+        [UnityTest]
+        public IEnumerator HighCoverKeepsBodyCoveredAtRightEdge() => CheckHighCoverExposure(1);
+
+        [UnityTest]
+        public IEnumerator HighCoverExposureFollowsRotatedWall() => CheckHighCoverExposure(1, 45);
+
+        private IEnumerator CheckHighCoverExposure(float side, float angle = 0)
+        {
+            SetField(typeof(Cover), m_cover, "m_type", CoverType.High);
+            Quaternion rotation = Quaternion.Euler(0, angle, 0);
+            m_wall.transform.SetPositionAndRotation(Origin + rotation * new Vector3(0, 1.1f, 1.1f), rotation);
+            m_body.position = Origin + rotation * new Vector3(side * 4.65f, 0, 0);
+            Physics.SyncTransforms();
+            yield return null;
+            IMovement movement = m_entity.Movement;
+            movement.TakeCover();
+            yield return new WaitForSeconds(.55f);
+            Vector3 coveredPosition = m_body.position;
+            movement.SetCoverExposure(true, rotation * Vector3.forward);
+            yield return new WaitForSeconds(.4f);
+            Assert.IsTrue(movement.IsExposed);
+            Assert.IsTrue(movement.IsInCover);
+            Assert.That(Vector3.Distance(m_body.position, coveredPosition), Is.LessThan(.02f));
+            Assert.That(Vector3.Dot(m_character.transform.forward, m_movement.CoverNormal), Is.GreaterThan(.99f));
+            Assert.That(Vector3.Dot(m_movement.ExposureDirection, rotation * Vector3.right * side), Is.GreaterThan(.99f));
+            Assert.That(m_capsule.height, Is.EqualTo(1.8f).Within(.001f));
+
+            movement.SetCoverExposure(false, Vector3.zero);
+            yield return new WaitForSeconds(.4f);
+            Assert.IsFalse(movement.IsExposed);
+            Assert.AreEqual(Vector3.zero, m_movement.ExposureDirection);
+            Assert.IsTrue(movement.IsInCover);
+            Assert.That(Vector3.Distance(m_body.position, coveredPosition), Is.LessThan(.03f));
+            Assert.That(Vector3.Dot(m_character.transform.forward, m_movement.CoverNormal), Is.GreaterThan(.99f));
+        }
+
+        [UnityTest]
+        public IEnumerator HighCoverExposureRejectsBlockedEdgesAndRechecksClearance()
+        {
+            SetField(typeof(Cover), m_cover, "m_type", CoverType.High);
+            m_body.position = Origin + Vector3.right * 4.65f;
+            Physics.SyncTransforms();
+            yield return null;
+            m_movement.TakeCover();
+            yield return new WaitForSeconds(.55f);
+            m_ceiling = new GameObject("Blocked edge test");
+            m_ceiling.transform.position = m_body.position + new Vector3(.6f, .9f, 0);
+            m_ceiling.AddComponent<BoxCollider>().size = new Vector3(.2f, 1.8f, .2f);
+            Physics.SyncTransforms();
+
+            m_movement.SetCoverExposure(true, Vector3.forward);
+            yield return new WaitForFixedUpdate();
+            Assert.IsFalse(m_movement.IsExposed);
+            m_ceiling.SetActive(false);
+            Physics.SyncTransforms();
+            yield return new WaitForSeconds(.4f);
+            Assert.IsTrue(m_movement.IsExposed);
+
+            m_wall.GetComponent<BoxCollider>().size = new Vector3(20, 2.2f, .3f);
+            Physics.SyncTransforms();
+            yield return new WaitForFixedUpdate();
+            Assert.IsFalse(m_movement.IsExposed);
+            m_movement.enabled = false;
+            Assert.IsFalse(m_movement.IsInCover);
+            Assert.IsFalse(m_movement.IsExposed);
         }
 
         [UnityTest]
@@ -199,6 +411,14 @@ namespace RogueLikeEngine.Tests.PlayMode
             {
                 InputSystem.RemoveDevice(keyboard);
             }
+        }
+
+        private WeaponsSystem AddWeapons()
+        {
+            WeaponsSystem weapons = m_character.AddComponent<WeaponsSystem>();
+            SetField(typeof(EntitySystem), weapons, "m_entity", m_entity);
+            SetField(typeof(Entity), m_entity, "m_weaponsSystem", weapons);
+            return weapons;
         }
 
         private static void SetField(Type type, object target, string name, object value) =>

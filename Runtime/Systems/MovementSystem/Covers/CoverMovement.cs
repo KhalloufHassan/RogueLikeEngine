@@ -1,4 +1,5 @@
 using RogueLikeEngine.Utils;
+using RogueLikeEngine.Systems.Weapons;
 using UnityEngine;
 
 namespace RogueLikeEngine.Systems.Movements
@@ -15,6 +16,8 @@ namespace RogueLikeEngine.Systems.Movements
         [SerializeField] private float m_coverSpeedMultiplier = .5f;
         [SerializeField] private float m_transitionSpeedMultiplier = .3f;
         [SerializeField] private float m_transitionDuration = .5f;
+        [Tooltip("Lateral reach used to check an upper-body peek without moving the body")]
+        [SerializeField, Min(0)] private float m_exposureDistance = .55f;
 
         private CoverState m_coverState;
         private Collider m_wall;
@@ -26,6 +29,10 @@ namespace RogueLikeEngine.Systems.Movements
         private float m_standingHeight;
         private bool m_highCover;
         private float m_transitionTimeLeft;
+        private bool m_exposureRequested;
+        private bool m_isExposed;
+        private Vector3 m_exposureAim;
+        private Vector3 m_requestedAim;
 
         public Cover AvailableCover { get; private set; }
 
@@ -33,6 +40,8 @@ namespace RogueLikeEngine.Systems.Movements
         public bool IsHighCover => m_highCover;
         public Vector3 CoverNormal => m_coverNormal;
         public override bool IsInCover => m_coverState is CoverState.Entering or CoverState.Holding;
+        public override bool IsExposed => m_isExposed;
+        public Vector3 ExposureDirection { get; private set; }
         public float CoverSpeed => Speed * (m_coverState == CoverState.Holding ? m_coverSpeedMultiplier : m_transitionSpeedMultiplier);
 
         protected override void Awake()
@@ -62,6 +71,18 @@ namespace RogueLikeEngine.Systems.Movements
             m_coverState = CoverState.Leaving;
             m_transitionTimeLeft = m_transitionDuration;
             RestoreMovement();
+        }
+
+        /// <summary>Requests exposure while in cover. Physics clearance determines IsExposed.</summary>
+        public override void SetCoverExposure(bool exposed, Vector3 aimDirection)
+        {
+            m_exposureRequested = exposed && IsInCover && IsSystemActive && isActiveAndEnabled;
+            if (!m_exposureRequested)
+            {
+                Hide();
+                return;
+            }
+            m_requestedAim = Body.Flatten(aimDirection).normalized;
         }
 
         protected override void Update()
@@ -103,13 +124,14 @@ namespace RogueLikeEngine.Systems.Movements
             if (!IsSystemActive) return;
 
             MoveAlongCover();
+            UpdateExposure();
             Vector3 offset = Body.Flatten(m_coverPosition - Position);
             Vector3 alignment = Vector3.Project(offset, m_coverNormal);
             Vector3 velocity = Vector3.ClampMagnitude(alignment / Time.fixedDeltaTime, m_alignSpeed)
                 + Vector3.ClampMagnitude((offset - alignment) / Time.fixedDeltaTime, CoverSpeed);
             if (m_coverState == CoverState.Entering) velocity = Vector3.ClampMagnitude(velocity, CoverSpeed);
             ApplyVelocity(velocity, Time.fixedDeltaTime);
-            Body.RotateTowards(m_coverNormal, 720 * Time.fixedDeltaTime);
+            Body.RotateTowards(IsExposed && !m_highCover ? m_exposureAim : m_coverNormal, 720 * Time.fixedDeltaTime);
         }
 
         private void MoveAlongCover()
@@ -146,6 +168,80 @@ namespace RogueLikeEngine.Systems.Movements
             m_cover = cover;
             m_coverPosition = wall.point - leadingEdge + m_coverNormal * (m_capsule.radius + .05f);
             m_coverPosition.y = Position.y;
+        }
+
+        private void UpdateExposure()
+        {
+            IWeaponsSystem weapons = Entity ? Entity.WeaponsSystem : null;
+            bool firing = weapons is { IsFireHeld: true };
+            m_exposureAim = m_exposureRequested ? m_requestedAim : firing
+                ? Body.Flatten(weapons.IsAiming ? weapons.AimDirection : transform.forward).normalized
+                : Vector3.zero;
+            if ((!m_exposureRequested && !firing) || m_coverState != CoverState.Holding || m_exposureAim.sqrMagnitude < 1E-6f)
+            {
+                Hide();
+                return;
+            }
+
+            if (!m_highCover)
+            {
+                m_isExposed = CanStand();
+                SetCapsuleHeight(IsExposed ? m_standingHeight : m_crouchHeight);
+                return;
+            }
+
+            Vector3 tangent = Vector3.Cross(Vector3.up, m_coverNormal);
+            float side = Vector3.Dot(m_exposureAim, tangent);
+            if (Mathf.Abs(side) < .01f && IsExposed) side = Vector3.Dot(ExposureDirection, tangent);
+            Vector3 preferred = tangent * (side < 0 ? -m_exposureDistance : m_exposureDistance);
+            if (!CanExposeAt(preferred))
+            {
+                preferred = -preferred;
+                if (!CanExposeAt(preferred))
+                {
+                    Hide();
+                    return;
+                }
+            }
+
+            ExposureDirection = preferred.normalized;
+            m_isExposed = true;
+        }
+
+        private bool CanExposeAt(Vector3 offset)
+        {
+            Vector3 position = m_coverPosition + offset;
+            Vector3 innerEdge = position - offset.normalized * .1f + Vector3.up * .6f;
+            if (!HasClearLine(innerEdge, innerEdge - m_coverNormal * (m_capsule.radius + .15f))) return false;
+
+            Vector3 center = m_coverPosition + offset * .5f + Vector3.up * (m_standingHeight * .8f);
+            Vector3 halfSize = new(offset.magnitude * .5f + .15f, .2f, .15f);
+            foreach (Collider obstacle in PhysicsUtils.OverlapBox(center, halfSize, Quaternion.LookRotation(m_coverNormal),
+                         Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                if (obstacle.attachedRigidbody != m_rigidbody3D) return false;
+
+            Vector3 origin = position + Vector3.up * (m_standingHeight * .8f);
+            return HasClearLine(origin, origin + m_exposureAim * (m_capsule.radius + .4f));
+        }
+
+        private bool HasClearLine(Vector3 start, Vector3 end)
+        {
+            foreach (Collider obstacle in PhysicsUtils.OverlapCapsule(start, end, .01f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                if (obstacle.attachedRigidbody != m_rigidbody3D) return false;
+            return true;
+        }
+
+        private void Hide()
+        {
+            m_isExposed = false;
+            ExposureDirection = Vector3.zero;
+            if (IsInCover && !m_highCover) SetCapsuleHeight(m_crouchHeight);
+        }
+
+        private void SetCapsuleHeight(float height)
+        {
+            m_capsule.height = height;
+            m_capsule.center = m_standingCenter - Vector3.up * ((m_standingHeight - height) / 2);
         }
 
         private RaycastHit FindCover()
@@ -192,10 +288,7 @@ namespace RogueLikeEngine.Systems.Movements
             m_transitionTimeLeft = m_transitionDuration;
             base.Move(Vector3.zero);
             if (!m_highCover)
-            {
-                m_capsule.height = m_crouchHeight;
-                m_capsule.center = m_standingCenter - Vector3.up * ((m_standingHeight - m_crouchHeight) / 2);
-            }
+                SetCapsuleHeight(m_crouchHeight);
         }
 
         private bool CanStand()
@@ -218,10 +311,11 @@ namespace RogueLikeEngine.Systems.Movements
 
         private void RestoreMovement()
         {
+            m_exposureRequested = false;
+            Hide();
             m_cover = null;
             m_wall = null;
-            m_capsule.height = m_standingHeight;
-            m_capsule.center = m_standingCenter;
+            SetCapsuleHeight(m_standingHeight);
             base.Move(m_input);
         }
 

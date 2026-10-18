@@ -16,6 +16,7 @@ namespace RogueLikeEngine.Systems.Weapons
         public virtual bool CanFire => IsSystemActive && m_gunPoint && m_gunPoint.CanFire;
         public Vector3 AimDirection { get; protected set; }
         public bool IsAiming => AimDirection.magnitude > 1E-10;
+        public bool IsFireHeld { get; private set; }
 
         public event Action OnFire;
 
@@ -27,13 +28,20 @@ namespace RogueLikeEngine.Systems.Weapons
         }
 
         /// <summary>Called once when the fire action begins, before repeated Fire calls.</summary>
-        public virtual void BeginFire() { }
+        public virtual void BeginFire() => IsFireHeld = IsSystemActive && isActiveAndEnabled;
 
         /// <summary>Called when the player releases the fire action.</summary>
-        public virtual void EndFire() { }
+        public virtual void EndFire() => IsFireHeld = false;
 
         /// <summary>Aborts held input without treating interruption as a release.</summary>
-        public virtual void CancelInput() { }
+        public virtual void CancelInput() => IsFireHeld = false;
+
+        protected override void OnSystemActiveChanged()
+        {
+            if (!IsSystemActive) CancelInput();
+        }
+
+        protected virtual void OnDisable() => CancelInput();
         
         public virtual void Aim(Vector3 direction)
         {

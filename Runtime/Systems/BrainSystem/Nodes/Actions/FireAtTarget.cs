@@ -10,6 +10,8 @@ namespace RogueLikeEngine.Systems.Brains.Nodes
     {
         public BrainValue<Entity> Target;
 
+        protected override void OnStart(BrainContext context) => context.Entity.WeaponsSystem?.BeginFire();
+
         protected override BrainStatus OnTick(BrainContext context)
         {
             Entity target = Target.Get(context);

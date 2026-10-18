@@ -1,4 +1,6 @@
 using NUnit.Framework;
+using RogueLikeEngine.Systems.Brains;
+using RogueLikeEngine.Systems.Brains.Nodes;
 using RogueLikeEngine.Systems.Entities;
 using RogueLikeEngine.Systems.Stats;
 using RogueLikeEngine.Systems.Weapons;
@@ -34,6 +36,55 @@ namespace RogueLikeEngine.Tests
 
         [TearDown]
         public void TearDown() => m_objects.Dispose();
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void HeldFireWorksWithoutAReadyWeaponAndClearsOnReleaseOrCancel(bool cancel)
+        {
+            IWeaponsSystem weapons = m_weaponsSystem;
+            int shots = 0;
+            weapons.OnFire += () => shots++;
+            Assert.IsFalse(weapons.CanFire);
+            weapons.BeginFire();
+            weapons.Fire();
+            Assert.IsTrue(weapons.IsFireHeld);
+            Assert.AreEqual(0, shots);
+            if (cancel) weapons.CancelInput();
+            else weapons.EndFire();
+            Assert.IsFalse(weapons.IsFireHeld);
+        }
+
+        [Test]
+        public void LockCancelsHeldFireAndUnlockDoesNotRestartIt()
+        {
+            m_weaponsSystem.BeginFire();
+            m_weaponsSystem.Lock(this);
+            Assert.IsFalse(m_weaponsSystem.IsFireHeld);
+            m_weaponsSystem.BeginFire();
+            Assert.IsFalse(m_weaponsSystem.IsFireHeld);
+            m_weaponsSystem.Unlock(this);
+            Assert.IsFalse(m_weaponsSystem.IsFireHeld);
+            m_weaponsSystem.BeginFire();
+            Assert.IsTrue(m_weaponsSystem.IsFireHeld);
+            m_weaponsSystem.IsSystemActive = false;
+            Assert.IsFalse(m_weaponsSystem.IsFireHeld);
+        }
+
+        [Test]
+        public void FireAtTargetStartsHeldFireAndCancelsOnInterruption()
+        {
+            TestReflection.SetField(m_entity, "m_weaponsSystem", m_weaponsSystem);
+            Entity target = m_objects.CreateComponent<Entity>();
+            BrainContext context = new(m_entity, System.Array.Empty<BrainVariable>());
+            FireAtTarget fire = new() { Target = new BrainValue<Entity> { Constant = target } };
+            Assert.AreEqual(BrainStatus.Running, fire.Tick(context));
+            Assert.IsTrue(m_weaponsSystem.IsFireHeld);
+            fire.Reset(context);
+            Assert.IsFalse(m_weaponsSystem.IsFireHeld);
+            fire.Target.Constant = null;
+            Assert.AreEqual(BrainStatus.Failure, fire.Tick(context));
+            Assert.IsFalse(m_weaponsSystem.IsFireHeld);
+        }
 
         [Test]
         public void Damage_AddsDamageStat()
