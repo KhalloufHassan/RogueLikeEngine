@@ -8,15 +8,29 @@ namespace RogueLikeEngine.EditorTools.Brains
     [Serializable]
     public abstract class CompositeNode : BrainGraphNode
     {
-        protected override void OnDefineOptions(IOptionDefinitionContext context) =>
-            context.AddOption<int>("Children").WithDefaultValue(2).Build();
+        private const string ChildrenOption = "Children";
+        private const string ChildPrefix = "Child ";
+        private const string NameSuffix = " name";
+
+        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        {
+            base.OnDefineOptions(context);
+            context.AddOption<int>(ChildrenOption).WithDefaultValue(2).Build().TryGetValue(out int count);
+            for (int i = 0; i < Mathf.Clamp(count, 1, 32); i++)
+                context.AddOption<string>(ChildPrefix + (i + 1) + NameSuffix).Delayed().ShowInInspectorOnly().Build();
+        }
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
             base.OnDefinePorts(context);
-            GetNodeOptionByName("Children").TryGetValue(out int count);
+            GetNodeOptionByName(ChildrenOption).TryGetValue(out int count);
             for (int i = 0; i < Mathf.Clamp(count, 1, 32); i++)
-                context.AddOutputPort($"Child {i + 1}").WithCapacity(PortCapacity.Single).Build();
+            {
+                string port = ChildPrefix + (i + 1);
+                GetNodeOptionByName(port + NameSuffix).TryGetValue(out string name);
+                context.AddOutputPort(port).WithDisplayName(string.IsNullOrWhiteSpace(name) ? port : $"{i + 1}. {name}")
+                    .WithCapacity(PortCapacity.Single).Build();
+            }
         }
     }
 }

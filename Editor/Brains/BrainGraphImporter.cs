@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace RogueLikeEngine.EditorTools.Brains
 {
-    [ScriptedImporter(1, BrainAuthoringGraph.Extension)]
+    [ScriptedImporter(2, BrainAuthoringGraph.Extension)]
     public sealed class BrainGraphImporter : ScriptedImporter
     {
         public override void OnImportAsset(AssetImportContext context)
@@ -19,7 +19,7 @@ namespace RogueLikeEngine.EditorTools.Brains
             {
                 BrainAuthoringGraph graph = GraphDatabase.LoadGraphForImporter<BrainAuthoringGraph>(context.assetPath);
                 if (graph.NodeCount == 0) return;
-                BrainGraphCompiler compiler = new(graph);
+                BrainGraphCompiler compiler = new(graph, context.DependsOnSourceAsset);
                 BrainVariable[] variables = compiler.Variables();
                 asset.SetDefinition(compiler.Root(), variables);
             }

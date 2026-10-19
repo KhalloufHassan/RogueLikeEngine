@@ -7,7 +7,7 @@ using Unity.GraphToolkit.Editor;
 
 namespace RogueLikeEngine.EditorTools.Brains
 {
-    [Serializable, Node("Brain/Actions", "", "Chase Target")]
+    [Serializable, Node("Brain/Actions", BrainNodeIcons.Movement, "Chase Target")]
     public sealed class ChaseTargetNode : BrainGraphNode
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)

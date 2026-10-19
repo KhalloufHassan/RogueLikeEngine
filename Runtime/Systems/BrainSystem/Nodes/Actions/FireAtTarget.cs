@@ -18,7 +18,7 @@ namespace RogueLikeEngine.Systems.Brains.Nodes
             IWeaponsSystem weapons = context.Entity.WeaponsSystem;
             if (!target || target.Health is { IsDead: true } || weapons == null) return BrainStatus.Failure;
             weapons.Aim(target.transform.position - context.Entity.transform.position);
-            if (weapons.CanFire) weapons.Fire();
+            if (weapons.CanFire && context.Entity.Movement is not { IsInCover: true, IsExposed: false }) weapons.Fire();
             return BrainStatus.Running;
         }
 

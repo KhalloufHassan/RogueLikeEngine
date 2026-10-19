@@ -4,7 +4,7 @@ using Unity.GraphToolkit.Editor;
 
 namespace RogueLikeEngine.EditorTools.Brains
 {
-    [Serializable, UseWithGraph(typeof(BrainAuthoringGraph)), Node("Brain", "", "Entry")]
+    [Serializable, UseWithGraph(typeof(BrainAuthoringGraph)), Node("Brain", BrainNodeIcons.Entry, "Entry")]
     public sealed class EntryNode : Node
     {
         protected override void OnDefinePorts(IPortDefinitionContext context) =>

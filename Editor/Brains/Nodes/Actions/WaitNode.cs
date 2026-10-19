@@ -6,7 +6,7 @@ using Unity.GraphToolkit.Editor;
 
 namespace RogueLikeEngine.EditorTools.Brains
 {
-    [Serializable, Node("Brain/Actions", "", "Wait")]
+    [Serializable, Node("Brain/Actions", BrainNodeIcons.Time, "Wait")]
     public sealed class WaitNode : BrainGraphNode
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)

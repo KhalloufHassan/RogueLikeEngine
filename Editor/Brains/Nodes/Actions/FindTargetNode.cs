@@ -8,11 +8,12 @@ using UnityEngine;
 
 namespace RogueLikeEngine.EditorTools.Brains
 {
-    [Serializable, Node("Brain/Actions", "", "Find Target")]
+    [Serializable, Node("Brain/Actions", BrainNodeIcons.Search, "Find Target")]
     public sealed class FindTargetNode : BrainGraphNode
     {
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
+            base.OnDefineOptions(context);
             context.AddOption<LayerMask>("Layers").WithDefaultValue((LayerMask)(-1)).Build();
             context.AddOption<bool>("Use 2D").Build();
         }
