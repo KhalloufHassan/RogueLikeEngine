@@ -1,3 +1,4 @@
+using RogueLikeEngine.Systems.Abilities;
 using RogueLikeEngine.Systems.Entities;
 using RogueLikeEngine.Systems.Movements;
 using UnityEngine;
@@ -8,8 +9,10 @@ namespace RogueLikeEngine.Input
     public class PlayerInputController : MonoBehaviour
     {
         [SerializeField] private Entity player;
+        [SerializeField] private Ability ability;
 
         private bool firing;
+        private bool usingAbility;
         private bool inputInterrupted;
         private void Update()
         {
@@ -61,11 +64,31 @@ namespace RogueLikeEngine.Input
             }
         }
 
+        public void OnAbility(InputAction.CallbackContext context)
+        {
+            if (inputInterrupted || !ability) return;
+            if (context.performed && !usingAbility)
+            {
+                usingAbility = true;
+                ability.BeginUse();
+            }
+            if (usingAbility && (context.canceled || (context.started && !context.ReadValueAsButton())))
+            {
+                usingAbility = false;
+                if (Application.isFocused && isActiveAndEnabled)
+                    ability.EndUse();
+                else
+                    ability.CancelUse();
+            }
+        }
+
         private Vector3 ToWorld(Vector2 input) => player.Movement?.ToWorld(input) ?? input;
 
         private void CancelInput()
         {
             firing = false;
+            usingAbility = false;
+            if (ability) ability.CancelUse();
             if (!player) return;
             if (player.Movement != null) player.Movement.Move(Vector2.zero);
             if (player.WeaponsSystem != null)
