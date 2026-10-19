@@ -7,7 +7,7 @@ using UnityEngine.AI;
 
 namespace RogueLikeEngine.Systems.Brains.Nodes
 {
-    /// <summary>Finds reachable cover on the side away from a threat, near an edge for high cover.</summary>
+    /// <summary>Finds unoccupied reachable cover away from a threat, near an edge for high cover.</summary>
     [Serializable]
     public sealed class FindCoverPosition : BrainNode
     {
@@ -49,6 +49,7 @@ namespace RogueLikeEngine.Systems.Brains.Nodes
                     Vector3 point = center + normal * (halfDepth + .65f) + tangent * (side * Mathf.Max(0, halfWidth - .2f));
                     point.y = origin.y;
                     if (!NavMesh.SamplePosition(point, out NavMeshHit hit, .6f, filter)) continue;
+                    if (IsOccupied(hit.position, context.Entity)) continue;
                     Vector3 sight = hit.position + Vector3.up * .5f;
                     Vector3 threat = target.transform.position + Vector3.up * .5f;
                     if (!Physics.Linecast(sight, threat, out RaycastHit obstruction, Layers, QueryTriggerInteraction.Ignore) ||
@@ -63,6 +64,16 @@ namespace RogueLikeEngine.Systems.Brains.Nodes
             if (float.IsPositiveInfinity(bestScore)) return BrainStatus.Failure;
             context.Set(DestinationVariable, best);
             return BrainStatus.Success;
+        }
+
+        private static bool IsOccupied(Vector3 position, Entity owner)
+        {
+            foreach (Collider collider in PhysicsUtils.OverlapSphere(position + Vector3.up * .5f, .65f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            {
+                Entity occupant = collider.GetComponentInParent<Entity>();
+                if (occupant && occupant != owner) return true;
+            }
+            return false;
         }
     }
 }
