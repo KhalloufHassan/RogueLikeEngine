@@ -11,5 +11,7 @@ namespace RogueLikeEngine.Tests.PlayMode.Input
         public override void BeginUse() => Begins++;
         public override void EndUse() => Ends++;
         public override void CancelUse() => Cancels++;
+
+        public void StartTestCooldown() => StartCooldown();
     }
 }
