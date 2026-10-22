@@ -12,6 +12,8 @@ namespace RogueLikeEngine.Systems.Weapons
         public WeaponData WeaponData { get; }
         public int ProjectilesFired { get; private set; }
         public float DamageDealt { get; set; }
+        /// <summary>Rounds left in the magazine, unused by weapons with unlimited ammo.</summary>
+        public int Ammo { get; set; }
         
         
         public Projectile CreateProjectile(IWeaponsSystem ownerSystem)

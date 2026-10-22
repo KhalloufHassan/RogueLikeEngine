@@ -4,7 +4,10 @@ using RogueLikeEngine.Systems.Weapons;
 
 namespace RogueLikeEngine.Systems.Brains.Nodes
 {
-    /// <summary>Aims and fires at a living target until interrupted or the target becomes invalid.</summary>
+    /// <summary>
+    /// Aims and fires at a living target until interrupted, failing when the target becomes invalid.
+    /// Succeeds once the weapon starts reloading, so an empty magazine ends the burst.
+    /// </summary>
     [Serializable]
     public sealed class FireAtTarget : BrainNode
     {
@@ -18,7 +21,15 @@ namespace RogueLikeEngine.Systems.Brains.Nodes
             IWeaponsSystem weapons = context.Entity.WeaponsSystem;
             if (!target || target.Health is { IsDead: true } || weapons == null) return BrainStatus.Failure;
             weapons.Aim(target.transform.position - context.Entity.transform.position);
-            if (weapons.CanFire && context.Entity.Movement is not { IsInCover: true, IsExposed: false }) weapons.Fire();
+            if (weapons.IsReloading) return BrainStatus.Success;
+            if (!weapons.CanFire) return BrainStatus.Running;
+            if (weapons.CurrentWeapon is not { WeaponData: { chargeable: true } })
+                weapons.Fire();
+            else if (weapons.ChargeProgress >= 1)
+            {
+                weapons.EndFire();
+                weapons.BeginFire();
+            }
             return BrainStatus.Running;
         }
 

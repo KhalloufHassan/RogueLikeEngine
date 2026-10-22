@@ -14,11 +14,6 @@ namespace RogueLikeEngine.Input
         private bool firing;
         private bool usingAbility;
         private bool inputInterrupted;
-        private void Update()
-        {
-            if(firing && !inputInterrupted && player && player.WeaponsSystem != null)
-                player.WeaponsSystem.Fire();
-        }
 
         public void OnMove(InputAction.CallbackContext context)
         {
@@ -62,6 +57,12 @@ namespace RogueLikeEngine.Input
                 else
                     CancelInput();
             }
+        }
+
+        public void OnReload(InputAction.CallbackContext context)
+        {
+            if (!context.performed || inputInterrupted || !player || player.WeaponsSystem == null) return;
+            player.WeaponsSystem.Reload();
         }
 
         public void OnAbility(InputAction.CallbackContext context)

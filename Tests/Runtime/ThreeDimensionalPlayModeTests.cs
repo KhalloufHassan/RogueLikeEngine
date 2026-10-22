@@ -120,7 +120,7 @@ namespace RogueLikeEngine.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator GunPoint3D_OrbitsAndFacesTheAim_AtItsHeight()
+        public IEnumerator AimFollower3D_OrbitsAndFacesTheAim_AtItsHeight()
         {
             GameObject owner = CreateInactive("Owner");
             owner.AddComponent<Rigidbody>().useGravity = false;
@@ -128,14 +128,12 @@ namespace RogueLikeEngine.Tests.PlayMode
             WeaponsSystem weapons = owner.AddComponent<WeaponsSystem>();
             SetField(weapons, "m_entity", entity);
 
-            GameObject gun = new("GunPoint");
+            GameObject gun = new("Gun");
             gun.transform.SetParent(owner.transform);
             gun.transform.localPosition = new Vector3(0, 1, 0);
-            GunPoint gunPoint = gun.AddComponent<GunPoint>();
-            SetField(gunPoint, "weaponsSystem", weapons);
-            SetField(gunPoint, "shootingTransform", gun.transform);
-            SetField(gunPoint, "weaponData", Track(ScriptableObject.CreateInstance<WeaponData>()));
-            SetField(gunPoint, "m_distanceFromOwner", 0.75f);
+            AimFollower follower = gun.AddComponent<AimFollower>();
+            SetField(follower, "m_weaponsSystem", weapons);
+            SetField(follower, "m_distanceFromOwner", 0.75f);
             owner.SetActive(true);
             yield return null;
 
@@ -145,6 +143,33 @@ namespace RogueLikeEngine.Tests.PlayMode
             Vector3 expected = owner.transform.position + Vector3.left * 0.75f + Vector3.up;
             Assert.That(Vector3.Distance(expected, gun.transform.position), Is.LessThan(1e-3f));
             Assert.That(Vector3.Angle(Vector3.left, gun.transform.forward), Is.LessThan(0.1f));
+        }
+
+        [Test]
+        public void GunPoints3D_ShootFromTheWallSurface_WhenTheMuzzleIsBlocked()
+        {
+            GameObject owner = CreateInactive("Owner");
+            owner.AddComponent<Rigidbody>().isKinematic = true;
+            GameObject muzzle = new("Muzzle");
+            muzzle.transform.SetParent(owner.transform);
+            muzzle.transform.localPosition = new Vector3(0, 1, 1);
+            GunPoints gunPoints = muzzle.AddComponent<GunPoints>();
+            owner.SetActive(true);
+
+            GameObject wall = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            wall.transform.position = new Vector3(0, 1, 0.75f);
+            wall.transform.localScale = new Vector3(2, 2, 0.1f);
+            Physics.SyncTransforms();
+
+            Assert.AreEqual(muzzle.transform.position, gunPoints.Position, "The check is off without blocking layers");
+
+            SetField(gunPoints, "m_blockingLayers", (LayerMask)(1 << wall.layer));
+            Assert.That(Mathf.Abs(gunPoints.Position.z - 0.7f), Is.LessThan(1e-3f), "Starts behind the muzzle without an origin");
+
+            GameObject origin = Track(new GameObject("Origin"));
+            origin.transform.position = new Vector3(0, 1, 0.9f);
+            SetField(gunPoints, "m_clearanceOrigin", origin.transform);
+            Assert.AreEqual(muzzle.transform.position, gunPoints.Position, "Nothing between the origin and the muzzle");
         }
 
         [Test]

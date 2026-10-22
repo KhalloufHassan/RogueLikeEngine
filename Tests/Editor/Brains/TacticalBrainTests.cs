@@ -104,6 +104,7 @@ namespace RogueLikeEngine.Tests
             TestReflection.SetField(owner, "m_movement", movement);
             RecordingWeaponsSystem weapons = owner.gameObject.AddComponent<RecordingWeaponsSystem>();
             TestReflection.SetField(owner, "m_weaponsSystem", weapons);
+            TestReflection.SetField(weapons, "m_entity", owner);
             Entity target = objects.CreateComponent<Entity>();
             target.transform.position = Vector3.forward * 10;
             movement.InCover = true;

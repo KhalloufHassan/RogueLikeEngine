@@ -25,7 +25,10 @@ namespace RogueLikeEngine.Systems.Movements
 
         public Vector3 Position => Body.Position;
         public Vector3 Velocity => Body.Velocity;
-        public float Speed => m_baseSpeed + m_baseSpeed * (m_movementSpeedStat?.FinalFloatValue ?? 0) / 100f;
+        public float Speed => (m_baseSpeed + m_baseSpeed * (m_movementSpeedStat?.FinalFloatValue ?? 0) / 100f) * (1 - WeaponWeight);
+
+        /// <summary>Speed fraction lost to the weight of the weapon being aimed.</summary>
+        private float WeaponWeight => Entity && Entity.WeaponsSystem is { IsAiming: true, CurrentWeapon: { } weapon } ? weapon.WeaponData.weight : 0;
 
         /// <summary>The 2D or 3D body this movement drives, custom movements should only move through it.</summary>
         protected IBody Body { get; private set; }
