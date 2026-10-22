@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using RogueLikeEngine.Optimization.Pooling;
+using RogueLikeEngine.Surfaces;
 using RogueLikeEngine.Systems.Entities;
 using RogueLikeEngine.Systems.Healths;
 using UnityEngine;
@@ -9,6 +10,9 @@ namespace RogueLikeEngine.Systems.Weapons
 {
     public class Projectile : MonoBehaviour,IPoolObject
     {
+        [Tooltip("Optional sound and VFX played where the projectile hits, picked by the hit object's Surface")]
+        [SerializeField] private SurfaceEffects m_impactEffects;
+
         public WeaponInstance Weapon { get; set; }
         public Damage Damage { get; set; }
         public float Range { get; set; }
@@ -65,6 +69,7 @@ namespace RogueLikeEngine.Systems.Weapons
                 health.TakeDamage(new Damage(Damage.Value, Direction));
                 if (Weapon != null) Weapon.DamageDealt += Damage.Value;
             }
+            if (m_impactEffects) m_impactEffects.Play(Surface.Of(hit.Collider), hit.Point, hit.Normal, Direction);
             OnHit?.Invoke(hit);
             Finish();
         }
