@@ -42,7 +42,7 @@ namespace RogueLikeEngine.Tests.PlayMode
         public void TearDown()
         {
             foreach (Projectile projectile in m_behavior.Projectiles)
-                if (projectile) Object.Destroy(projectile.gameObject);
+                if (projectile) Object.Destroy(projectile.transform.parent ? projectile.transform.parent.gameObject : projectile.gameObject);
             foreach (Object obj in m_objects)
                 if (obj) Object.Destroy(obj);
             m_objects.Clear();
@@ -160,6 +160,20 @@ namespace RogueLikeEngine.Tests.PlayMode
             m_weapons.Unlock(this);
             yield return null;
             Assert.IsTrue(m_weapons.IsReloading);
+        }
+
+        [UnityTest]
+        public IEnumerator Projectiles_AreReusedFromTheWeaponsOwnPool()
+        {
+            Equip(w => w.baseRange = .5f);
+            m_weapons.Fire();
+            Projectile first = m_behavior.Projectiles[0];
+            for (float time = 0; time < 1 && first.gameObject.activeSelf; time += Time.deltaTime)
+                yield return null;
+            Assert.IsFalse(first.gameObject.activeSelf, "the projectile should be back in its pool");
+
+            m_weapons.Fire();
+            Assert.AreSame(first, m_behavior.Projectiles[1]);
         }
 
         private WeaponData Equip(System.Action<WeaponData> configure)

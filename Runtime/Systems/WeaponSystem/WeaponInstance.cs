@@ -1,6 +1,4 @@
-﻿using UnityEngine;
-
-namespace RogueLikeEngine.Systems.Weapons
+﻿namespace RogueLikeEngine.Systems.Weapons
 {
     public class WeaponInstance
     {
@@ -18,7 +16,7 @@ namespace RogueLikeEngine.Systems.Weapons
         
         public Projectile CreateProjectile(IWeaponsSystem ownerSystem)
         {
-            Projectile projectile = WeaponData.projectilesPool ? WeaponData.projectilesPool.Request() : Object.Instantiate(WeaponData.projectilePrefab);
+            Projectile projectile = WeaponData.RequestProjectile();
             projectile.Damage = new Damage(ownerSystem.CalculatedProjectileDamage(WeaponData));
             projectile.Range = ownerSystem.CalculatedProjectileRange(WeaponData);
             projectile.Speed = ownerSystem.CalculatedProjectileSpeed(WeaponData);

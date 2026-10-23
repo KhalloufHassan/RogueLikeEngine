@@ -1,3 +1,4 @@
+using System;
 using RogueLikeEngine.Attributes;
 using RogueLikeEngine.Optimization.Pooling;
 using RogueLikeEngine.Systems.Stats;
@@ -36,12 +37,26 @@ namespace RogueLikeEngine.Systems.Weapons
         public float baseReloadDuration = 1;
         [Range(0, 1), Tooltip("Movement speed lost while aiming: 0 doesn't slow, 1 stops movement")]
         public float weight;
-        public ProjectilesPool projectilesPool;
-        [HideIf(nameof(projectilesPool))]
+        [Tooltip("Pooled automatically, the pool is created on the first shot")]
         public Projectile projectilePrefab;
         [SerializeReference, ReferencePicker, Tooltip("Optional custom logic called around firing and reloading")]
         public WeaponBehavior behavior;
 
+        [NonSerialized] private ProjectilesPool m_projectilesPool;
+
         public virtual WeaponInstance CreateWeaponInstance() => new(this);
+
+        /// <summary>Takes a projectile from this weapon's pool, created on first use or when the prefab changes.</summary>
+        public Projectile RequestProjectile()
+        {
+            if (!m_projectilesPool || m_projectilesPool.prefab != projectilePrefab)
+            {
+                m_projectilesPool = CreateInstance<ProjectilesPool>();
+                m_projectilesPool.hideFlags = HideFlags.DontUnloadUnusedAsset;
+                m_projectilesPool.prefab = projectilePrefab;
+            }
+
+            return m_projectilesPool.Request();
+        }
     }
 }
