@@ -31,7 +31,8 @@ namespace RogueLikeEngine.Systems.Weapons
             }
         }
 
-        private Transform Current => m_points.Length == 0 ? transform : m_points[m_index];
+        /// <summary>The point the next shot leaves from.</summary>
+        public Transform Current => m_points.Length == 0 ? transform : m_points[m_index];
         private Vector3 Forward => m_is3D ? Current.forward : Current.right;
 
         private int m_index;
@@ -40,12 +41,53 @@ namespace RogueLikeEngine.Systems.Weapons
         private void Awake() => m_is3D = GetComponentInParent<Rigidbody>();
 
         /// <summary>The current point's shooting direction, rotated by <paramref name="angle"/> degrees on the gameplay plane.</summary>
-        public Vector3 GetDirection(float angle) => Quaternion.AngleAxis(angle, m_is3D ? Vector3.up : Vector3.forward) * Forward;
+        public Vector3 GetDirection(float angle) => GetDirection(Forward, angle);
+
+        /// <summary><paramref name="direction"/> rotated by <paramref name="angle"/> degrees on the gameplay plane.</summary>
+        public Vector3 GetDirection(Vector3 direction, float angle) => Quaternion.AngleAxis(angle, m_is3D ? Vector3.up : Vector3.forward) * direction;
 
         /// <summary>Moves on to the next point for the following shot.</summary>
         public void Advance()
         {
             if (m_points.Length > 0) m_index = (m_index + 1) % m_points.Length;
+        }
+
+        /// <summary>
+        /// Draws the points (current one yellow), the clearance check (grey, red up to the blocking surface when blocked),
+        /// the point's forward (blue) and the direction the next shot flies (green, the aim while aiming).
+        /// </summary>
+        private void OnDrawGizmosSelected()
+        {
+            if (!Application.isPlaying) m_is3D = GetComponentInParent<Rigidbody>();
+
+            Gizmos.color = Color.grey;
+            foreach (Transform point in m_points)
+                if (point) Gizmos.DrawWireSphere(point.position, .04f);
+
+            Transform current = Current;
+            if (!current) return;
+            Vector3 position = Position;
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireSphere(current.position, .06f);
+
+            if (m_blockingLayers != 0)
+            {
+                Gizmos.color = Color.grey;
+                Gizmos.DrawLine(m_clearanceOrigin ? m_clearanceOrigin.position : current.position - Forward * m_clearanceDistance, position);
+                if (position != current.position)
+                {
+                    Gizmos.color = Color.red;
+                    Gizmos.DrawLine(position, current.position);
+                    Gizmos.DrawWireSphere(position, .06f);
+                }
+            }
+
+            Gizmos.color = Color.blue;
+            Gizmos.DrawRay(position, Forward * .5f);
+
+            IWeaponsSystem weaponsSystem = GetComponentInParent<IWeaponsSystem>();
+            Gizmos.color = Color.green;
+            Gizmos.DrawRay(position, (weaponsSystem is { IsAiming: true } ? weaponsSystem.AimDirection : Forward) * 3f);
         }
     }
 }

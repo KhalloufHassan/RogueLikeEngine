@@ -46,7 +46,7 @@ namespace RogueLikeEngine.Audio
             }
 
             double now = Time.realtimeSinceStartupAsDouble;
-            if (now - m_lastPlayTime < m_minInterval) return null;
+            if (now >= m_lastPlayTime && now - m_lastPlayTime < m_minInterval) return null;
             m_lastPlayTime = now;
             m_active ??= new List<TPlayback>();
             if (m_maxInstances > 0 && m_active.Count >= m_maxInstances)

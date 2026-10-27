@@ -34,7 +34,7 @@ public class Pool<T> : ScriptableObject,IPool where T : Component, IPoolObject
 
     public T Request()
     {
-        if(_pool == null)
+        if(_pool == null || !transform)
             InitializePool();
         T obj = _pool?.Get();
         if(obj)
@@ -84,7 +84,7 @@ public class Pool<T> : ScriptableObject,IPool where T : Component, IPoolObject
 
     private void DisposeAllActiveOnSceneReload(Scene arg0, LoadSceneMode loadSceneMode)
     {
-        if (m_activeObjects?.Count > 0)
+        if (transform && m_activeObjects?.Count > 0)
         {
             foreach (T poolObject in m_activeObjects.ToList())
             {

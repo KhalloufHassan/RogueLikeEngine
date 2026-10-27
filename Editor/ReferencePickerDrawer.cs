@@ -6,7 +6,7 @@ using System.Linq;
 using RogueLikeEngine.Attributes;
 
 /// <summary>
-/// Draws a type picker for [SerializeReference] fields followed by the selected instance's fields.
+/// Draws a type picker for [SerializeReference] fields followed by the selected instance's fields, collapsible with a foldout.
 /// Keeps no per-property state: Unity shares one drawer instance across all elements of an array,
 /// so the current selection is always read from the property itself.
 /// </summary>
@@ -41,7 +41,16 @@ public class ReferencePickerDrawer : PropertyDrawer
         int currentIndex = Array.IndexOf(options.ManagedNames, property.managedReferenceFullTypename);
         if (currentIndex < 0) currentIndex = 0;
 
-        int newIndex = EditorGUI.Popup(popupRect, label, currentIndex, options.Names);
+        bool hasValue = property.managedReferenceValue != null;
+        Rect labelRect = new(popupRect.x, popupRect.y, EditorGUIUtility.labelWidth, popupRect.height);
+        Rect fieldRect = new(labelRect.xMax, popupRect.y, popupRect.width - labelRect.width, popupRect.height);
+        if (hasValue) property.isExpanded = EditorGUI.Foldout(labelRect, property.isExpanded, label, true);
+        else EditorGUI.LabelField(labelRect, label);
+
+        int indent = EditorGUI.indentLevel;
+        EditorGUI.indentLevel = 0;
+        int newIndex = EditorGUI.Popup(fieldRect, currentIndex, options.Names);
+        EditorGUI.indentLevel = indent;
 
         if (newIndex != currentIndex)
         {
@@ -49,7 +58,7 @@ public class ReferencePickerDrawer : PropertyDrawer
             property.managedReferenceValue = selectedType == null ? null : Activator.CreateInstance(selectedType);
             property.serializedObject.ApplyModifiedProperties();
         }
-        else if (property.managedReferenceValue != null)
+        else if (hasValue && property.isExpanded)
         {
             EditorGUI.indentLevel++;
             float y = popupRect.yMax + Spacing;
@@ -68,7 +77,7 @@ public class ReferencePickerDrawer : PropertyDrawer
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
         float height = EditorGUIUtility.singleLineHeight;
-        if (property.propertyType != SerializedPropertyType.ManagedReference || property.managedReferenceValue == null)
+        if (property.propertyType != SerializedPropertyType.ManagedReference || property.managedReferenceValue == null || !property.isExpanded)
             return height;
 
         foreach (SerializedProperty child in GetChildren(property))

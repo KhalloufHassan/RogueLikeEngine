@@ -190,6 +190,28 @@ namespace RogueLikeEngine.Tests.PlayMode
             Assert.That(Vector2.Distance(new Vector2(1, 0), aim), Is.LessThan(1e-3f));
         }
 
+        [Test]
+        public void MouseAim3D_AimsOnThePlaneAtAimHeight_UnderATiltedCamera()
+        {
+            GameObject cameraObject = Track(new GameObject("Camera"));
+            cameraObject.tag = "MainCamera";
+            Camera camera = cameraObject.AddComponent<Camera>();
+            cameraObject.transform.SetPositionAndRotation(new Vector3(0, 10, -10), Quaternion.Euler(45, 0, 0));
+
+            GameObject player = Track(new GameObject("Player"));
+            player.tag = "Player";
+            player.AddComponent<Rigidbody>().useGravity = false;
+
+            Vector2 mouse = camera.WorldToScreenPoint(new Vector3(3, 1.5f, 5));
+            Vector2 expected = new Vector2(3, 5).normalized;
+
+            Vector2 groundAim = new MousePositionToAimProcessor().Process(mouse, null);
+            Vector2 aim = new MousePositionToAimProcessor { aimHeight = 1.5f }.Process(mouse, null);
+
+            Assert.That(Vector2.Distance(expected, aim), Is.LessThan(1e-3f));
+            Assert.That(Vector2.Distance(expected, groundAim), Is.GreaterThan(.01f), "Aiming on the ground misses a target above it");
+        }
+
         private static void SetField(object target, string fieldName, object value)
         {
             for (Type type = target.GetType(); type != null; type = type.BaseType)

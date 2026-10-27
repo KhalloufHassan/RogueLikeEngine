@@ -92,6 +92,17 @@ namespace RogueLikeEngine.Tests.PlayMode
             Assert.Fail($"No field {name} on {target.GetType().Name}");
         }
 
+        [Test]
+        public void MinInterval_IgnoresALastPlayLeftFromAnEarlierPlaySession()
+        {
+            Sound sound = CreateSound(1, minInterval: 10);
+            typeof(SoundBase<SoundPlayback>).GetField("m_lastPlayTime", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(sound, Time.realtimeSinceStartupAsDouble + 1000);
+
+            Assert.IsTrue(m_manager.Play(sound).IsActive);
+            Assert.IsFalse(m_manager.Play(sound).IsActive, "the interval still applies within the session");
+        }
+
         [UnityTest]
         public IEnumerator StaleHandle_DoesNotAffectSoundReusingItsEmitter()
         {

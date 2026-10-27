@@ -1,7 +1,9 @@
 using System;
 using RogueLikeEngine.Attributes;
+using RogueLikeEngine.Audio;
 using RogueLikeEngine.Optimization.Pooling;
 using RogueLikeEngine.Systems.Stats;
+using RogueLikeEngine.Vfx;
 using UnityEngine;
 
 namespace RogueLikeEngine.Systems.Weapons
@@ -41,6 +43,11 @@ namespace RogueLikeEngine.Systems.Weapons
         public Projectile projectilePrefab;
         [SerializeReference, ReferencePicker, Tooltip("Optional custom logic called around firing and reloading")]
         public WeaponBehavior behavior;
+
+        [Header("Effects"), SerializeReference, ReferencePicker, Tooltip("Played once per shot by the weapons system's sound manager, following the gun point it left from")]
+        public ISound fireSound;
+        [Tooltip("Played once per shot by the weapons system's VFX manager, following the gun point it left from")]
+        public PooledVfx muzzleFlash;
 
         [NonSerialized] private ProjectilesPool m_projectilesPool;
 

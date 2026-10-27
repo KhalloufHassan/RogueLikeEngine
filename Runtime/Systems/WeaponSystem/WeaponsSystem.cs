@@ -1,7 +1,9 @@
 using System;
+using RogueLikeEngine.Audio;
 using RogueLikeEngine.Systems.Entities;
 using RogueLikeEngine.Systems.Stats;
 using RogueLikeEngine.Utils.Timers;
+using RogueLikeEngine.Vfx;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -11,6 +13,10 @@ namespace RogueLikeEngine.Systems.Weapons
     {
         [SerializeField] private WeaponData m_weaponData;
         [SerializeField] private GunPoints m_gunPoints;
+        [Tooltip("Plays the weapons' fire sounds, optional")]
+        [SerializeField] private SoundManager m_soundManager;
+        [Tooltip("Plays the weapons' muzzle flashes, optional")]
+        [SerializeField] private VfxManager m_vfxManager;
         [SerializeField] private StatDefinition m_fireRateStatDefinition;
         [SerializeField] private StatDefinition m_rangeStatDefinition;
         [SerializeField] private StatDefinition m_projectileSpeedStatDefinition;
@@ -92,14 +98,16 @@ namespace RogueLikeEngine.Systems.Weapons
             weaponData.behavior?.OnPreFire(this, ref shot);
 
             Vector3 position = m_gunPoints.Position;
+            Vector3 forward = IsAiming ? AimDirection : m_gunPoints.GetDirection(0);
             for (int i = 0; i < shot.ProjectileCount; i++)
             {
                 Projectile projectile = CurrentWeapon.CreateProjectile(this);
                 projectile.Damage = new Damage(Mathf.RoundToInt(projectile.Damage.Value * shot.DamageMultiplier));
                 weaponData.behavior?.OnProjectileCreated(this, shot, projectile);
                 float spread = shot.ProjectileCount > 1 ? (i / (shot.ProjectileCount - 1f) - .5f) * shot.SpreadAngle : 0;
-                projectile.Launch(position, m_gunPoints.GetDirection(spread + Random.Range(-.5f, .5f) * shot.Inaccuracy));
+                projectile.Launch(position, m_gunPoints.GetDirection(forward, spread + Random.Range(-.5f, .5f) * shot.Inaccuracy));
             }
+            PlayFireEffects(weaponData);
             m_gunPoints.Advance();
 
             ChargeProgress = 0;
@@ -108,6 +116,13 @@ namespace RogueLikeEngine.Systems.Weapons
             m_coolDownTimer.Reset();
             weaponData.behavior?.OnPostFire(this, shot);
             OnFire?.Invoke();
+        }
+
+        private void PlayFireEffects(WeaponData weaponData)
+        {
+            Transform muzzle = m_gunPoints.Current;
+            if (m_soundManager && weaponData.fireSound != null) m_soundManager.Play(weaponData.fireSound, muzzle);
+            if (m_vfxManager && weaponData.muzzleFlash) m_vfxManager.Play(weaponData.muzzleFlash, muzzle);
         }
 
         /// <summary>Starts refilling the magazine, unless it is full, already reloading or the ammo is unlimited.</summary>

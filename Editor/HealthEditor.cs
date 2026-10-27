@@ -1,4 +1,5 @@
 using RogueLikeEngine.Systems.Healths;
+using RogueLikeEngine.Systems.Weapons;
 using UnityEditor;
 using UnityEngine;
 
@@ -9,6 +10,8 @@ namespace RogueLikeEngine.EditorTools
     public sealed class HealthEditor : Editor
     {
         private int m_healthAmount = 10;
+        private float m_shieldAmount = 10;
+        private int m_damageAmount = 10;
 
         public override bool RequiresConstantRepaint() => Application.isPlaying;
 
@@ -24,6 +27,12 @@ namespace RogueLikeEngine.EditorTools
 
             EditorGUILayout.Space();
             EditorGUI.ProgressBar(EditorGUILayout.GetControlRect(false, 22), fraction, label);
+            if (health.MaxShield > 0)
+            {
+                float shield = playing ? health.CurrentShield / health.MaxShield : 0;
+                string shieldLabel = playing ? $"Shield: {health.CurrentShield:0} / {health.MaxShield:0}" : $"Shield: — / {health.MaxShield:0} (not running)";
+                EditorGUI.ProgressBar(EditorGUILayout.GetControlRect(false, 18), shield, shieldLabel);
+            }
             EditorGUILayout.Space();
             EditorGUI.DrawRect(EditorGUILayout.GetControlRect(false, 1), new Color(.5f, .5f, .5f, .5f));
             EditorGUILayout.LabelField("Testing Section", EditorStyles.boldLabel);
@@ -42,6 +51,23 @@ namespace RogueLikeEngine.EditorTools
                     if (GUILayout.Button(new GUIContent("Max Health", "Restore current health to its maximum")))
                         health.Heal(maximum - health.CurrentHealth);
                 }
+
+                if (health.MaxShield > 0)
+                {
+                    m_shieldAmount = Mathf.Max(1, EditorGUILayout.FloatField("Shield Amount", m_shieldAmount));
+                    using (new EditorGUI.DisabledScope(!health.IsSystemActive || health.CurrentShield >= health.MaxShield))
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        if (GUILayout.Button("Add Shield")) health.RestoreShield(m_shieldAmount);
+                        if (GUILayout.Button(new GUIContent("Max Shield", "Restore the shield to its maximum")))
+                            health.RestoreShield(health.MaxShield - health.CurrentShield);
+                    }
+                }
+
+                m_damageAmount = Mathf.Max(1, EditorGUILayout.IntField("Damage Amount", m_damageAmount));
+                using (new EditorGUI.DisabledScope(!health.IsSystemActive || health.Invulnerable))
+                    if (GUILayout.Button(new GUIContent("Take Damage", "Shield absorbs it first and restarts its recharge delay")))
+                        health.TakeDamage(new Damage(m_damageAmount));
             }
         }
     }

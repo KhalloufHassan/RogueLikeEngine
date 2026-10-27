@@ -5,6 +5,9 @@ namespace RogueLikeEngine.Input
 {
     public class MousePositionToAimProcessor : InputProcessor<Vector2>
     {
+        [Tooltip("Top-down 3D: height above the player of the plane the mouse aims on, set it to where shots travel")]
+        public float aimHeight;
+
         private GameObject m_player;
         private Camera m_camera;
         private bool m_is3D;
@@ -28,10 +31,10 @@ namespace RogueLikeEngine.Input
             return direction;
         }
 
-        /// <summary>Top-down 3D: where the mouse ray meets the ground plane at the player's height, as an XZ direction.</summary>
+        /// <summary>Top-down 3D: where the mouse ray meets the horizontal plane <see cref="aimHeight"/> above the player, as an XZ direction.</summary>
         private Vector2 AimOnGround(Vector2 mousePosition)
         {
-            Vector3 playerPosition = m_player.transform.position;
+            Vector3 playerPosition = m_player.transform.position + Vector3.up * aimHeight;
             Ray ray = m_camera.ScreenPointToRay(mousePosition);
             if (!new Plane(Vector3.up, playerPosition).Raycast(ray, out float distance)) return Vector2.zero;
 

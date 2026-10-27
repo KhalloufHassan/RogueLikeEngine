@@ -124,6 +124,30 @@ namespace RogueLikeEngine.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator ExposureWaitsForTheLeanOutDuration()
+        {
+            WeaponsSystem weapons = AddWeapons();
+            SetField(typeof(CoverMovement), m_movement, "m_exposeDuration", .2f);
+            yield return null;
+            weapons.Aim(Vector3.forward);
+            m_movement.TakeCover();
+            yield return new WaitForSeconds(.55f);
+            weapons.BeginFire();
+            yield return new WaitForFixedUpdate();
+            Assert.That(m_movement.ExposureProgress, Is.GreaterThan(0).And.LessThan(1));
+            Assert.IsFalse(m_movement.IsExposed);
+            Assert.That(m_capsule.height, Is.EqualTo(1.8f).Within(.001f));
+            yield return new WaitForSeconds(.25f);
+            yield return new WaitForFixedUpdate();
+            Assert.AreEqual(1, m_movement.ExposureProgress);
+            Assert.IsTrue(m_movement.IsExposed);
+            weapons.EndFire();
+            yield return new WaitForFixedUpdate();
+            Assert.AreEqual(0, m_movement.ExposureProgress);
+            Assert.IsFalse(m_movement.IsExposed);
+        }
+
+        [UnityTest]
         public IEnumerator SharedWeaponFireStillRequiresAClearHighCoverEdge()
         {
             WeaponsSystem weapons = AddWeapons();

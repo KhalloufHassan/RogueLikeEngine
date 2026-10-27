@@ -242,5 +242,54 @@ namespace RogueLikeEngine.Tests
             Assert.IsTrue(m_health.IsSystemActive);
             Assert.AreEqual(90, m_health.CurrentHealth);
         }
+
+        [Test]
+        public void Shield_AbsorbsDamageFirst_AndOverflowReachesHealth()
+        {
+            TestReflection.SetField(m_health, "m_maxShield", 30f);
+            Awake();
+            int broken = 0;
+            m_health.OnShieldBroken += () => broken++;
+
+            m_health.TakeDamage(new Damage(20));
+            Assert.AreEqual(10, m_health.CurrentShield);
+            Assert.AreEqual(BaseMaxHealth, m_health.CurrentHealth);
+            Assert.AreEqual(0, broken);
+
+            m_health.TakeDamage(new Damage(25));
+            Assert.AreEqual(0, m_health.CurrentShield);
+            Assert.AreEqual(85, m_health.CurrentHealth);
+            Assert.AreEqual(1, broken);
+
+            m_health.TakeDamage(new Damage(5));
+            Assert.AreEqual(80, m_health.CurrentHealth);
+            Assert.AreEqual(1, broken);
+        }
+
+        [Test]
+        public void RestoreShield_ClampsToMax_AndIsIgnoredWhenDead()
+        {
+            TestReflection.SetField(m_health, "m_maxShield", 30f);
+            Awake();
+            m_health.TakeDamage(new Damage(20));
+
+            m_health.RestoreShield(15);
+            Assert.AreEqual(25, m_health.CurrentShield);
+            m_health.RestoreShield(15);
+            Assert.AreEqual(30, m_health.CurrentShield);
+
+            m_health.TakeDamage(new Damage(200));
+            m_health.RestoreShield(15);
+            Assert.AreEqual(0, m_health.CurrentShield);
+        }
+
+        [Test]
+        public void NoShield_DamageGoesStraightToHealth()
+        {
+            Awake();
+            m_health.TakeDamage(new Damage(10));
+            Assert.AreEqual(0, m_health.MaxShield);
+            Assert.AreEqual(90, m_health.CurrentHealth);
+        }
     }
 }

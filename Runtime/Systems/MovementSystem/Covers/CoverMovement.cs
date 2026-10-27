@@ -19,6 +19,8 @@ namespace RogueLikeEngine.Systems.Movements
         [SerializeField, Min(0)] private float m_exitDuration = .3f;
         [Tooltip("Lateral reach used to check an upper-body peek without moving the body")]
         [SerializeField, Min(0)] private float m_exposureDistance = .55f;
+        [Tooltip("Seconds to lean out of cover once clear, before IsExposed allows shooting")]
+        [SerializeField, Min(0)] private float m_exposeDuration;
 
         private CoverState m_coverState;
         private Collider m_wall;
@@ -43,6 +45,8 @@ namespace RogueLikeEngine.Systems.Movements
         public override bool IsInCover => m_coverState is CoverState.Entering or CoverState.Holding;
         public override bool IsExposed => m_isExposed;
         public Vector3 ExposureDirection { get; private set; }
+        /// <summary>Progress of leaning out of cover from 0 to 1, IsExposed once it reaches 1. Resets to 0 when hiding.</summary>
+        public float ExposureProgress { get; private set; }
         public float CoverSpeed => Speed * (m_coverState == CoverState.Holding ? m_coverSpeedMultiplier : m_transitionSpeedMultiplier);
 
         protected override void Awake()
@@ -132,7 +136,7 @@ namespace RogueLikeEngine.Systems.Movements
                 + Vector3.ClampMagnitude((offset - alignment) / Time.fixedDeltaTime, CoverSpeed);
             if (m_coverState == CoverState.Entering) velocity = Vector3.ClampMagnitude(velocity, CoverSpeed);
             ApplyVelocity(velocity, Time.fixedDeltaTime);
-            Body.RotateTowards(IsExposed && !m_highCover ? m_exposureAim : m_coverNormal, 720 * Time.fixedDeltaTime);
+            Body.RotateTowards(ExposureProgress > 0 && !m_highCover ? m_exposureAim : m_coverNormal, 720 * Time.fixedDeltaTime);
         }
 
         private void MoveAlongCover()
@@ -186,14 +190,19 @@ namespace RogueLikeEngine.Systems.Movements
 
             if (!m_highCover)
             {
-                m_isExposed = CanStand();
-                SetCapsuleHeight(IsExposed ? m_standingHeight : m_crouchHeight);
+                if (CanStand())
+                {
+                    SetCapsuleHeight(m_standingHeight);
+                    LeanOut();
+                }
+                else
+                    Hide();
                 return;
             }
 
             Vector3 tangent = Vector3.Cross(Vector3.up, m_coverNormal);
             float side = Vector3.Dot(m_exposureAim, tangent);
-            if (Mathf.Abs(side) < .01f && IsExposed) side = Vector3.Dot(ExposureDirection, tangent);
+            if (Mathf.Abs(side) < .01f && ExposureProgress > 0) side = Vector3.Dot(ExposureDirection, tangent);
             Vector3 preferred = tangent * (side < 0 ? -m_exposureDistance : m_exposureDistance);
             if (!CanExposeAt(preferred))
             {
@@ -206,7 +215,13 @@ namespace RogueLikeEngine.Systems.Movements
             }
 
             ExposureDirection = preferred.normalized;
-            m_isExposed = true;
+            LeanOut();
+        }
+
+        private void LeanOut()
+        {
+            ExposureProgress = m_exposeDuration > 0 ? Mathf.MoveTowards(ExposureProgress, 1, Time.fixedDeltaTime / m_exposeDuration) : 1;
+            m_isExposed = ExposureProgress >= 1;
         }
 
         private bool CanExposeAt(Vector3 offset)
@@ -235,6 +250,7 @@ namespace RogueLikeEngine.Systems.Movements
         private void Hide()
         {
             m_isExposed = false;
+            ExposureProgress = 0;
             ExposureDirection = Vector3.zero;
             if (IsInCover && !m_highCover) SetCapsuleHeight(m_crouchHeight);
         }

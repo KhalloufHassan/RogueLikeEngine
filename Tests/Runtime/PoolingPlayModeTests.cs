@@ -69,6 +69,20 @@ namespace RogueLikeEngine.Tests.PlayMode
             return projectile;
         }
 
+        [Test]
+        public void Request_RebuildsThePoolOnceItsRootIsDestroyed()
+        {
+            ProjectilesPool pool = CreateProjectilesPool();
+            Projectile first = Request(pool);
+            first.Despawn();
+            Object.DestroyImmediate(first.transform.parent.gameObject);
+
+            Projectile second = Request(pool);
+
+            Assert.IsTrue(second, "the pool must not hand out objects destroyed with its old root");
+            Assert.IsTrue(second.gameObject.activeSelf);
+        }
+
         [UnityTest]
         public IEnumerator ReturnedProjectile_IsReusedWithResetState()
         {

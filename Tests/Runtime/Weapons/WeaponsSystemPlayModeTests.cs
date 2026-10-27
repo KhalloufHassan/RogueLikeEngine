@@ -4,6 +4,7 @@ using System.Reflection;
 using NUnit.Framework;
 using RogueLikeEngine.Systems.Entities;
 using RogueLikeEngine.Systems.Weapons;
+using RogueLikeEngine.Vfx;
 using UnityEngine;
 using UnityEngine.TestTools;
 
@@ -68,6 +69,17 @@ namespace RogueLikeEngine.Tests.PlayMode
             for (int i = 0; i < expected.Length; i++)
                 Assert.AreEqual(expected[i], Vector3.SignedAngle(Vector3.forward, m_behavior.Projectiles[i].Direction, Vector3.up), 1e-3f);
             Assert.AreEqual(weapon.baseDamage, m_behavior.Projectiles[0].Damage.Value);
+        }
+
+        [Test]
+        public void Shots_FlyAlongTheAim_NotTheGunPointsForward()
+        {
+            Equip(_ => { });
+            m_weapons.Aim(Vector3.right);
+
+            m_weapons.BeginFire();
+
+            Assert.AreEqual(0, Vector3.Angle(Vector3.right, m_behavior.Projectiles[0].Direction), 1e-3f);
         }
 
         [UnityTest]
@@ -174,6 +186,33 @@ namespace RogueLikeEngine.Tests.PlayMode
 
             m_weapons.Fire();
             Assert.AreSame(first, m_behavior.Projectiles[1]);
+        }
+
+        [UnityTest]
+        public IEnumerator EveryShot_PlaysTheMuzzleFlashFollowingTheGunPoint()
+        {
+            PooledVfx flash = Track(VfxManagerPlayModeTests.CreateEffect("Muzzle flash", 1));
+            SetField(m_weapons, "m_vfxManager", Track(ScriptableObject.CreateInstance<VfxManager>()));
+            Equip(w =>
+            {
+                w.automatic = false;
+                w.muzzleFlash = flash;
+            });
+            try
+            {
+                m_weapons.BeginFire();
+                m_weapons.EndFire();
+                m_weapons.transform.position += Vector3.right;
+                yield return null;
+
+                PooledVfx[] active = VfxManagerPlayModeTests.ActiveEffects;
+                Assert.AreEqual(1, active.Length);
+                Assert.That(Vector3.Distance(m_weapons.transform.position + Vector3.forward, active[0].transform.position), Is.LessThan(1e-4f));
+            }
+            finally
+            {
+                VfxManagerPlayModeTests.DestroyPools();
+            }
         }
 
         private WeaponData Equip(System.Action<WeaponData> configure)
