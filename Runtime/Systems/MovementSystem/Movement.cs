@@ -16,6 +16,7 @@ namespace RogueLikeEngine.Systems.Movements
         [SerializeField] protected Rigidbody2D m_rigidbody;
         [Tooltip("3D body, found automatically when empty. Use either this or the 2D body")]
         [SerializeField] protected Rigidbody m_rigidbody3D;
+        [SerializeField] private MovementFootsteps m_footsteps = new();
 
         public Vector3 MovementDirection { get; protected set; }
         public bool IsMoving => MovementDirection.magnitude > 1E-10;
@@ -58,6 +59,12 @@ namespace RogueLikeEngine.Systems.Movements
         {
             if (!IsSystemActive) return;
             AdjustRotation();
+        }
+
+        protected virtual void LateUpdate()
+        {
+            bool canStep = IsSystemActive && !m_hasExternalVelocity && !(Entity && Entity.Health is { IsDead: true });
+            m_footsteps?.Update(Body, canStep, IsInCover, Time.deltaTime);
         }
         
         public virtual void Move(Vector3 direction) 
@@ -130,6 +137,7 @@ namespace RogueLikeEngine.Systems.Movements
         {
             MovementDirection = Vector3.zero;
             ClearExternalVelocity();
+            m_footsteps?.Reset();
         }
 
         /// <summary>Walks on the movement plane while retaining the system's distance metric.</summary>
