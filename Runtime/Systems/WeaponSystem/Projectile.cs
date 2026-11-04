@@ -105,17 +105,19 @@ namespace RogueLikeEngine.Systems.Weapons
             }
             Entity target = hit.Other.GetComponentInParent<Entity>();
             IHealth health = target && target != Owner ? target.Health : null;
-            if (health != null)
+            IProjectileAffector affector = hit.Collider.GetComponentInParent<IProjectileAffector>();
+            AffectorResult result = default;
+            if (affector != null && (affector is not Behaviour behaviour || behaviour.isActiveAndEnabled))
+            {
+                result = affector.OnProjectileHit(hit, this);
+                if (!this || IsDisposed || !isActiveAndEnabled) return;
+            }
+            if (health != null && !result.IgnoreDamage)
             {
                 health.TakeDamage(new Damage(Damage.Value, Direction));
                 if (Weapon != null) Weapon.DamageDealt += Damage.Value;
             }
-            IProjectileAffector affector = hit.Collider.GetComponentInParent<IProjectileAffector>();
-            if (affector != null && (affector is not Behaviour behaviour || behaviour.isActiveAndEnabled))
-            {
-                AffectorResult result = affector.OnProjectileHit(hit, this);
-                if (result.IgnoreCollision || !this || IsDisposed || !isActiveAndEnabled) return;
-            }
+            if (result.IgnoreCollision || !this || IsDisposed || !isActiveAndEnabled) return;
             if (m_impactEffects) m_impactEffects.Play(Surface.Of(hit.Collider), hit.Point, hit.Normal, Direction);
             OnHit?.Invoke(hit);
             Finish();

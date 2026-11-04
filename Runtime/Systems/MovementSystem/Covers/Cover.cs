@@ -25,7 +25,7 @@ namespace RogueLikeEngine.Systems.Movements
                     && movement.Entity && movement.Entity.Health is { IsDead: false }
                     && Vector3.Dot(projectile.Direction, movement.CoverNormal) > .0001f) return default;
             projectile.IgnoreCollision(hit.Collider);
-            return new AffectorResult { IgnoreCollision = true };
+            return new AffectorResult { IgnoreDamage = true, IgnoreCollision = true };
         }
 
         private void OnDisable() => IsAvailable = false;
