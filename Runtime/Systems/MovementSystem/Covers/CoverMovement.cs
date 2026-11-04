@@ -1,3 +1,5 @@
+using RogueLikeEngine.Attributes;
+using RogueLikeEngine.Audio;
 using RogueLikeEngine.Utils;
 using RogueLikeEngine.Systems.Weapons;
 using UnityEngine;
@@ -21,6 +23,11 @@ namespace RogueLikeEngine.Systems.Movements
         [SerializeField, Min(0)] private float m_exposureDistance = .55f;
         [Tooltip("Seconds to lean out of cover once clear, before IsExposed allows shooting")]
         [SerializeField, Min(0)] private float m_exposeDuration;
+        [SerializeField] private SoundManager m_soundManager;
+        [Tooltip("Optional sound played once when a successful cover entry starts.")]
+        [SerializeReference, ReferencePicker] private ISound m_entrySound;
+        [Tooltip("Optional sound played once when a successful cover exit starts.")]
+        [SerializeReference, ReferencePicker] private ISound m_exitSound;
 
         private CoverState m_coverState;
         private Collider m_wall;
@@ -76,6 +83,7 @@ namespace RogueLikeEngine.Systems.Movements
             m_coverState = CoverState.Leaving;
             m_transitionTimeLeft = m_exitDuration;
             RestoreMovement();
+            if (m_exitSound != null && m_soundManager) m_soundManager.Play(m_exitSound, transform);
         }
 
         /// <summary>Requests exposure while in cover. Physics clearance determines IsExposed.</summary>
@@ -170,7 +178,7 @@ namespace RogueLikeEngine.Systems.Movements
             if (!cover || !cover.isActiveAndEnabled || cover.Type != m_cover.Type) return;
 
             m_wall = wall.collider;
-            m_cover = cover;
+            SetCover(cover);
             m_coverPosition = wall.point - leadingEdge + m_coverNormal * (m_capsule.radius + .05f);
             m_coverPosition.y = Position.y;
         }
@@ -257,8 +265,19 @@ namespace RogueLikeEngine.Systems.Movements
 
         private void SetCapsuleHeight(float height)
         {
-            m_capsule.height = height;
-            m_capsule.center = m_standingCenter - Vector3.up * ((m_standingHeight - height) / 2);
+            if (!Mathf.Approximately(m_capsule.height, height))
+            {
+                m_capsule.height = height;
+                m_capsule.center = m_standingCenter - Vector3.up * ((m_standingHeight - height) / 2);
+            }
+        }
+
+        private void SetCover(Cover cover)
+        {
+            if (m_cover == cover) return;
+            if (m_cover) m_cover.Unregister(this);
+            m_cover = cover;
+            if (m_cover) m_cover.Register(this);
         }
 
         private RaycastHit FindCover()
@@ -296,7 +315,7 @@ namespace RogueLikeEngine.Systems.Movements
 
             SetAvailableCover(null);
             m_wall = cover.collider;
-            m_cover = m_wall.GetComponentInParent<Cover>();
+            SetCover(m_wall.GetComponentInParent<Cover>());
             m_highCover = m_cover.Type == CoverType.High;
             m_coverNormal = Body.Flatten(cover.normal).normalized;
             m_coverPosition = cover.point + m_coverNormal * (m_capsule.radius + .05f);
@@ -306,6 +325,7 @@ namespace RogueLikeEngine.Systems.Movements
             base.Move(Vector3.zero);
             if (!m_highCover)
                 SetCapsuleHeight(m_crouchHeight);
+            if (m_entrySound != null && m_soundManager) m_soundManager.Play(m_entrySound, transform);
         }
 
         private bool CanStand()
@@ -330,7 +350,7 @@ namespace RogueLikeEngine.Systems.Movements
         {
             m_exposureRequested = false;
             Hide();
-            m_cover = null;
+            SetCover(null);
             m_wall = null;
             SetCapsuleHeight(m_standingHeight);
             base.Move(m_input);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using RogueLikeEngine.Optimization.Pooling;
 using RogueLikeEngine.Surfaces;
 using RogueLikeEngine.Systems.Entities;
@@ -30,6 +31,9 @@ namespace RogueLikeEngine.Systems.Weapons
 
         private Rigidbody2D m_rigidbody2D;
         private Rigidbody m_rigidbody3D;
+        private Collider[] m_colliders3D;
+        private Collider2D[] m_colliders2D;
+        private readonly HashSet<Component> m_ignoredColliders = new();
 
         private void Awake()
         {
@@ -42,9 +46,41 @@ namespace RogueLikeEngine.Systems.Weapons
 
         public void Launch(Vector3 position, Vector3 direction)
         {
+            ResetIgnoreCollisions();
             transform.position = position;
             SetDirection(direction);
             OnLaunched?.Invoke();
+        }
+
+        /// <summary>Passes through a collider for this flight. Restored on pool return or the next launch; supports 2D and 3D.</summary>
+        public void IgnoreCollision(Component other)
+        {
+            if (!other || !m_ignoredColliders.Add(other)) return;
+            SetIgnoreCollision(other, true);
+            SetVelocity(Direction * Speed);
+        }
+
+        private void ResetIgnoreCollisions()
+        {
+            foreach (Component other in m_ignoredColliders)
+                if (other) SetIgnoreCollision(other, false);
+            m_ignoredColliders.Clear();
+        }
+
+        private void SetIgnoreCollision(Component other, bool ignore)
+        {
+            if (other is Collider collider)
+            {
+                m_colliders3D ??= GetComponentsInChildren<Collider>(true);
+                foreach (Collider self in m_colliders3D)
+                    if (self && self != collider) Physics.IgnoreCollision(self, collider, ignore);
+            }
+            else if (other is Collider2D collider2D)
+            {
+                m_colliders2D ??= GetComponentsInChildren<Collider2D>(true);
+                foreach (Collider2D self in m_colliders2D)
+                    if (self && self != collider2D) Physics2D.IgnoreCollision(self, collider2D, ignore);
+            }
         }
 
         private void FixedUpdate()
@@ -62,12 +98,23 @@ namespace RogueLikeEngine.Systems.Weapons
         private void HandleHit(HitInfo hit)
         {
             if (IsDisposed || !enabled) return;
+            if (Owner && hit.Other.GetComponentInParent<Entity>() == Owner)
+            {
+                IgnoreCollision(hit.Collider);
+                return;
+            }
             Entity target = hit.Other.GetComponentInParent<Entity>();
             IHealth health = target && target != Owner ? target.Health : null;
             if (health != null)
             {
                 health.TakeDamage(new Damage(Damage.Value, Direction));
                 if (Weapon != null) Weapon.DamageDealt += Damage.Value;
+            }
+            IProjectileAffector affector = hit.Collider.GetComponentInParent<IProjectileAffector>();
+            if (affector != null && (affector is not Behaviour behaviour || behaviour.isActiveAndEnabled))
+            {
+                AffectorResult result = affector.OnProjectileHit(hit, this);
+                if (result.IgnoreCollision || !this || IsDisposed || !isActiveAndEnabled) return;
             }
             if (m_impactEffects) m_impactEffects.Play(Surface.Of(hit.Collider), hit.Point, hit.Normal, Direction);
             OnHit?.Invoke(hit);
@@ -119,6 +166,7 @@ namespace RogueLikeEngine.Systems.Weapons
 
         public void OnDisposed()
         {
+            ResetIgnoreCollisions();
             if (Entity) Entity.ClearEffects(true);
             TraveledDistance = 0;
             Direction = Vector3.zero;
